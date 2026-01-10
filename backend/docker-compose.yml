@@ -1,7 +1,7 @@
-version: '3.8'
 services:
   postgres:
     image: postgres:15
+    container_name: oddslab-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -10,6 +10,48 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - oddslab-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: oddslab-backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/oddslab
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-here}
+      PORT: 3001
+      NODE_ENV: production
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - oddslab-network
+    command: sh -c "npx prisma migrate deploy && pnpm start"
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: oddslab-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - oddslab-network
 
 volumes:
   postgres_data:
+
+networks:
+  oddslab-network:
+    driver: bridge

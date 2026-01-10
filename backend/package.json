@@ -17,7 +17,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "prisma": "^5.22.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -26,7 +27,6 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.10.5",
     "nodemon": "^3.1.9",
-    "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   }
