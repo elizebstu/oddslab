@@ -2,16 +2,12 @@ import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { isValidEthereumAddress } from '../utils/validation';
-import { resolveUsernameToAddress } from '../services/polymarketService';
+import { resolveUsernameToAddress, checkIfBot } from '../services/polymarketService';
 
 const prisma = new PrismaClient();
 
-/**
- * Check if input looks like a username (not an Ethereum address)
- */
 function isUsername(input: string): boolean {
   const trimmed = input.trim();
-  // Usernames don't start with 0x and are shorter than 42 characters
   return !trimmed.startsWith('0x') && trimmed.length < 42;
 }
 
@@ -35,25 +31,35 @@ export const addAddresses = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Separate addresses and usernames
     const resolvedAddresses: string[] = [];
     const notFound: string[] = [];
+    const botAddresses: string[] = [];
 
     for (const input of addresses) {
       const trimmed = input.trim();
 
       if (!trimmed) continue;
 
-      // If it's a valid Ethereum address, use it directly
       if (isValidEthereumAddress(trimmed)) {
+        // Check if this address is a bot
+        const botCheck = await checkIfBot(trimmed);
+        if (botCheck && botCheck.isBot) {
+          botAddresses.push(trimmed);
+          continue;
+        }
         resolvedAddresses.push(trimmed);
         continue;
       }
 
-      // If it looks like a username, try to resolve it
       if (isUsername(trimmed)) {
         const address = await resolveUsernameToAddress(trimmed);
         if (address) {
+          // Check if the resolved address is a bot
+          const botCheck = await checkIfBot(address);
+          if (botCheck && botCheck.isBot) {
+            botAddresses.push(trimmed);
+            continue;
+          }
           resolvedAddresses.push(address);
         } else {
           notFound.push(trimmed);
@@ -66,8 +72,16 @@ export const addAddresses = async (req: AuthRequest, res: Response) => {
     // If any usernames couldn't be resolved, return an error
     if (notFound.length > 0) {
       return res.status(400).json({
-        error: 'Could not resolve some usernames or addresses',
+        error: 'Could not find Polymarket users',
         notFound
+      });
+    }
+
+    // If any addresses are detected as bots, return an error
+    if (botAddresses.length > 0) {
+      return res.status(400).json({
+        error: 'Cannot add bot addresses (300+ trades/hour)',
+        botAddresses
       });
     }
 

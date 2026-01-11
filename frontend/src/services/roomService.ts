@@ -56,6 +56,11 @@ export const roomService = {
     return response.data;
   },
 
+  getPositions: async (roomId: string): Promise<Position[]> => {
+    const response = await api.get(`/rooms/${roomId}/positions`);
+    return response.data;
+  },
+
   getPublicRooms: async (): Promise<Room[]> => {
     const response = await api.get('/rooms/public/all');
     return response.data;
@@ -69,4 +74,12 @@ export interface Activity {
   amount: number;
   timestamp: string;
   userName?: string;
+}
+
+export interface Position {
+  market: string;
+  outcome: string;
+  totalValue: number;
+  totalShares: number;
+  avgPrice: number;
 }

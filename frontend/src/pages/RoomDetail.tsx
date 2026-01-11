@@ -1,20 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { roomService } from '../services/roomService';
-import type { Room, Activity } from '../services/roomService';
+import type { Room, Activity, Position } from '../services/roomService';
+
+type TabType = 'positions' | 'activities';
 
 export default function RoomDetail() {
   const { id } = useParams<{ id: string }>();
   const [room, setRoom] = useState<Room | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [addressInput, setAddressInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [addError, setAddError] = useState('');
+  const [activeTab, setActiveTab] = useState<TabType>('positions');
   const navigate = useNavigate();
 
   useEffect(() => {
     loadRoom();
+    loadPositions();
     loadActivities();
   }, [id]);
 
@@ -38,6 +43,15 @@ export default function RoomDetail() {
     }
   };
 
+  const loadPositions = async () => {
+    try {
+      const data = await roomService.getPositions(id!);
+      setPositions(data);
+    } catch (error) {
+      console.error('Failed to load positions:', error);
+    }
+  };
+
   const handleAddAddresses = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddError('');
@@ -47,10 +61,13 @@ export default function RoomDetail() {
       setAddressInput('');
       loadRoom();
       loadActivities();
+      loadPositions();
     } catch (error: any) {
       const responseData = error.response?.data;
-      if (responseData?.notFound && Array.isArray(responseData.notFound)) {
-        setAddError(`Could not find: ${responseData.notFound.join(', ')}`);
+      if (responseData?.botAddresses && Array.isArray(responseData.botAddresses)) {
+        setAddError(`Bot addresses detected (300+ trades/hour): ${responseData.botAddresses.join(', ')}`);
+      } else if (responseData?.notFound && Array.isArray(responseData.notFound)) {
+        setAddError(`Could not find Polymarket users: ${responseData.notFound.join(', ')}`);
       } else {
         setAddError(responseData?.error || 'Failed to add addresses');
       }
@@ -62,6 +79,7 @@ export default function RoomDetail() {
       await roomService.removeAddress(id!, addressId);
       loadRoom();
       loadActivities();
+      loadPositions();
     } catch (error) {
       console.error('Failed to remove address:', error);
     }
@@ -205,11 +223,11 @@ export default function RoomDetail() {
                 rows={3}
               />
               {addError && (
-                <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl mb-3 flex items-center gap-2">
-                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl mb-3 flex items-start gap-2">
+                  <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  {addError}
+                  <span>{addError}</span>
                 </div>
               )}
               <button
@@ -254,79 +272,173 @@ export default function RoomDetail() {
 
         <div className="lg:col-span-8">
           <div className="bg-white rounded-3xl border border-gray-200 p-6">
-            <h2 className="text-lg font-bold tracking-tight mb-6 flex items-center gap-2">
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-              Activity Feed
-              <span className="text-sm font-normal text-gray-400">
-                ({activities.length} {activities.length === 1 ? 'activity' : 'activities'})
-              </span>
-            </h2>
-            {activities.length === 0 ? (
-              <div className="py-16 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActiveTab('positions')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    activeTab === 'positions'
+                      ? 'bg-black text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                </div>
-                <p className="text-gray-500">No activities found</p>
-                <p className="text-sm text-gray-400 mt-1">Add addresses to see their trading activity</p>
+                  Positions
+                  <span className={`text-xs ${
+                    activeTab === 'positions' ? 'text-white/70' : 'text-gray-500'
+                  }`}>
+                    ({positions.length})
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('activities')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    activeTab === 'activities'
+                      ? 'bg-black text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                  Activity Feed
+                  <span className={`text-xs ${
+                    activeTab === 'activities' ? 'text-white/70' : 'text-gray-500'
+                  }`}>
+                    ({activities.length})
+                  </span>
+                </button>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {activities.map((activity, idx) => (
-                  <div
-                    key={idx}
-                    className="group p-4 rounded-2xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition-all"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          activity.type === 'buy'
-                            ? 'bg-green-100'
-                            : activity.type === 'sell'
-                            ? 'bg-red-100'
-                            : 'bg-gray-100'
-                        }`}>
-                          {activity.type === 'buy' ? (
-                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
-                            </svg>
-                          ) : activity.type === 'sell' ? (
-                            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5m0 0l-5-5m5 5V6" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                          )}
-                        </div>
+              {activeTab === 'activities' && (
+                <button
+                  onClick={loadActivities}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
+              )}
+            </div>
+
+            {activeTab === 'positions' ? (
+              positions.length === 0 ? (
+                <div className="py-16 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <p className="text-gray-500">No positions found</p>
+                  <p className="text-sm text-gray-400 mt-1">Add addresses to see their current positions</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {positions.map((position, idx) => (
+                    <div
+                      key={idx}
+                      className="group p-4 rounded-2xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">{activity.market}</p>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm">
-                            <span className={`text-gray-500 ${activity.userName ? 'font-medium' : 'font-mono text-xs'}`}>{formatDisplayName(activity)}</span>
-                            <span className="text-gray-300">•</span>
-                            <span className={`font-semibold uppercase ${
-                              activity.type === 'buy' ? 'text-green-600' : 'text-red-600'
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              idx === 0 ? 'bg-yellow-100 text-yellow-700' :
+                              idx === 1 ? 'bg-gray-200 text-gray-700' :
+                              idx === 2 ? 'bg-orange-100 text-orange-700' :
+                              'bg-gray-100 text-gray-600'
                             }`}>
-                              {activity.type}
+                              #{idx + 1}
                             </span>
-                            <span className="text-gray-300">•</span>
-                            <span className="font-semibold text-gray-900">
-                              ${activity.amount.toLocaleString()}
+                            <span className="text-xs text-gray-500">
+                              {position.totalShares.toLocaleString()} shares
                             </span>
                           </div>
+                          <p className="font-medium text-gray-900 mb-1">{position.market}</p>
+                          <p className="text-sm text-gray-500">{position.outcome}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-gray-900">
+                            ${position.totalValue.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            @ ${(position.avgPrice * 100).toFixed(1)}¢
+                          </p>
                         </div>
                       </div>
-                      <span className="text-xs text-gray-400 whitespace-nowrap tabular-nums">
-                        {formatTimestamp(activity.timestamp)}
-                      </span>
                     </div>
+                  ))}
+                </div>
+              )
+            ) : (
+              activities.length === 0 ? (
+                <div className="py-16 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                   </div>
-                ))}
-              </div>
+                  <p className="text-gray-500">No activities found</p>
+                  <p className="text-sm text-gray-400 mt-1">Add addresses to see their trading activity</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {activities.map((activity, idx) => (
+                    <div
+                      key={idx}
+                      className="group p-4 rounded-2xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            activity.type === 'buy'
+                              ? 'bg-green-100'
+                              : activity.type === 'sell'
+                              ? 'bg-red-100'
+                              : 'bg-gray-100'
+                          }`}>
+                            {activity.type === 'buy' ? (
+                              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                              </svg>
+                            ) : activity.type === 'sell' ? (
+                              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5m0 0l-5-5m5 5V6" />
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{activity.market}</p>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm">
+                              <span className={`text-gray-500 ${activity.userName ? 'font-medium' : 'font-mono text-xs'}`}>{formatDisplayName(activity)}</span>
+                              <span className="text-gray-300">•</span>
+                              <span className={`font-semibold uppercase ${
+                                activity.type === 'buy' ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {activity.type}
+                              </span>
+                              <span className="text-gray-300">•</span>
+                              <span className="font-semibold text-gray-900">
+                                ${activity.amount.toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-xs text-gray-400 whitespace-nowrap tabular-nums">
+                          {formatTimestamp(activity.timestamp)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
             )}
           </div>
         </div>
