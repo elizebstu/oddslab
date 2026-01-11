@@ -12,7 +12,7 @@
 ### Step 1: Start PostgreSQL
 ```bash
 cd backend
-docker-compose up -d
+   docker-compose up -d
 ```
 
 ### Step 2: Initialize Database

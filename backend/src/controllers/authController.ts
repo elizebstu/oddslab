@@ -29,7 +29,8 @@ export const register = async (req: Request, res: Response) => {
 
     res.status(201).json({ token, user: { id: user.id, email: user.email } });
   } catch (error) {
-    res.status(500).json({ error: 'Registration failed' });
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Registration failed', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 };
 
@@ -55,6 +56,7 @@ export const login = async (req: Request, res: Response) => {
 
     res.json({ token, user: { id: user.id, email: user.email } });
   } catch (error) {
-    res.status(500).json({ error: 'Login failed' });
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 };
