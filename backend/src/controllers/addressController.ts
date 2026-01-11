@@ -2,8 +2,18 @@ import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { isValidEthereumAddress } from '../utils/validation';
+import { resolveUsernameToAddress } from '../services/polymarketService';
 
 const prisma = new PrismaClient();
+
+/**
+ * Check if input looks like a username (not an Ethereum address)
+ */
+function isUsername(input: string): boolean {
+  const trimmed = input.trim();
+  // Usernames don't start with 0x and are shorter than 42 characters
+  return !trimmed.startsWith('0x') && trimmed.length < 42;
+}
 
 export const addAddresses = async (req: AuthRequest, res: Response) => {
   try {
@@ -25,16 +35,45 @@ export const addAddresses = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const invalidAddresses = addresses.filter(addr => !isValidEthereumAddress(addr));
-    if (invalidAddresses.length > 0) {
+    // Separate addresses and usernames
+    const resolvedAddresses: string[] = [];
+    const notFound: string[] = [];
+
+    for (const input of addresses) {
+      const trimmed = input.trim();
+
+      if (!trimmed) continue;
+
+      // If it's a valid Ethereum address, use it directly
+      if (isValidEthereumAddress(trimmed)) {
+        resolvedAddresses.push(trimmed);
+        continue;
+      }
+
+      // If it looks like a username, try to resolve it
+      if (isUsername(trimmed)) {
+        const address = await resolveUsernameToAddress(trimmed);
+        if (address) {
+          resolvedAddresses.push(address);
+        } else {
+          notFound.push(trimmed);
+        }
+      } else {
+        notFound.push(trimmed);
+      }
+    }
+
+    // If any usernames couldn't be resolved, return an error
+    if (notFound.length > 0) {
       return res.status(400).json({
-        error: 'Invalid Ethereum addresses',
-        invalidAddresses
+        error: 'Could not resolve some usernames or addresses',
+        notFound
       });
     }
 
+    // All inputs resolved successfully, add to database
     const createdAddresses = await Promise.all(
-      addresses.map(address =>
+      resolvedAddresses.map(address =>
         prisma.address.upsert({
           where: { address_roomId: { address, roomId: roomId as string } },
           update: {},
@@ -45,6 +84,7 @@ export const addAddresses = async (req: AuthRequest, res: Response) => {
 
     res.status(201).json(createdAddresses);
   } catch (error) {
+    console.error('Error adding addresses:', error);
     res.status(500).json({ error: 'Failed to add addresses' });
   }
 };

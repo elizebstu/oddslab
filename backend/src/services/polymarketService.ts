@@ -26,6 +26,7 @@ interface PolymarketTrade {
 
 const activityCache = new Map<string, { data: Activity[]; timestamp: number }>();
 const profileCache = new Map<string, { data: { name?: string; username?: string } | null; timestamp: number }>();
+const usernameCache = new Map<string, { data: string | null; timestamp: number }>();
 const CACHE_TTL = 60000; // 60 seconds
 const POLYMARKET_DATA_API = 'https://data-api.polymarket.com';
 const POLYMARKET_GAMMA_API = 'https://gamma-api.polymarket.com';
@@ -38,6 +39,63 @@ interface PolymarketProfile {
   createdAt?: string;
   proxyWallet?: string;
 }
+
+interface SearchResult {
+  id: string;
+  type: string;
+  profile?: PolymarketProfile;
+}
+
+/**
+ * Resolve a Polymarket username to their wallet address
+ * Returns the address if found, null otherwise
+ */
+export const resolveUsernameToAddress = async (
+  username: string
+): Promise<string | null> => {
+  // Remove @ prefix if present
+  const cleanUsername = username.replace(/^@/, '').trim().toLowerCase();
+  const cached = usernameCache.get(cleanUsername);
+
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  try {
+    const response = await axios.get<SearchResult[]>(`${POLYMARKET_GAMMA_API}/search`, {
+      params: {
+        query: cleanUsername,
+        type: 'profile',
+        limit: 5,
+      },
+      timeout: 10000,
+    });
+
+    // Find exact match by username
+    const exactMatch = response.data.find((result) => {
+      const displayUsername = result.profile?.displayUsernamePublic;
+      const pseudonym = result.profile?.pseudonym;
+      return (
+        displayUsername?.toLowerCase() === cleanUsername ||
+        pseudonym?.toLowerCase() === cleanUsername ||
+        result.id.toLowerCase() === cleanUsername
+      );
+    });
+
+    if (exactMatch && exactMatch.id.startsWith('0x')) {
+      usernameCache.set(cleanUsername, { data: exactMatch.id, timestamp: Date.now() });
+      return exactMatch.id;
+    }
+
+    // If no exact match, return null
+    usernameCache.set(cleanUsername, { data: null, timestamp: Date.now() });
+    return null;
+  } catch (error: any) {
+    console.error(`Error resolving username ${username}:`, error.message);
+    usernameCache.set(cleanUsername, { data: null, timestamp: Date.now() });
+    return null;
+  }
+};
 
 /**
  * Fetch user profile by wallet address from Polymarket Gamma API

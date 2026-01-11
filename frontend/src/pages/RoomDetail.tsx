@@ -10,6 +10,7 @@ export default function RoomDetail() {
   const [addressInput, setAddressInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [addError, setAddError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function RoomDetail() {
 
   const handleAddAddresses = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAddError('');
     const addresses = addressInput.split(/[,\n]/).map(a => a.trim()).filter(a => a);
     try {
       await roomService.addAddresses(id!, addresses);
@@ -46,7 +48,12 @@ export default function RoomDetail() {
       loadRoom();
       loadActivities();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to add addresses');
+      const responseData = error.response?.data;
+      if (responseData?.notFound && Array.isArray(responseData.notFound)) {
+        setAddError(`Could not find: ${responseData.notFound.join(', ')}`);
+      } else {
+        setAddError(responseData?.error || 'Failed to add addresses');
+      }
     }
   };
 
@@ -188,15 +195,23 @@ export default function RoomDetail() {
             </h2>
             <form onSubmit={handleAddAddresses} className="mb-6">
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                Add Ethereum Address
+                Add Address or Username
               </label>
               <textarea
                 value={addressInput}
                 onChange={(e) => setAddressInput(e.target.value)}
-                placeholder="0x1234...&#10;0x5678..."
+                placeholder="kch123&#10;0x1234...&#10;@username"
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all font-mono text-sm mb-3 resize-none"
                 rows={3}
               />
+              {addError && (
+                <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {addError}
+                </div>
+              )}
               <button
                 type="submit"
                 className="w-full bg-black text-white px-4 py-3 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
