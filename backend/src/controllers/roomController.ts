@@ -44,7 +44,7 @@ export const getRoom = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     const room = await prisma.room.findUnique({
-      where: { id },
+      where: { id: id as string },
       include: { addresses: true },
     });
 
@@ -67,7 +67,7 @@ export const deleteRoom = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const userId = req.userId!;
 
-    const room = await prisma.room.findUnique({ where: { id } });
+    const room = await prisma.room.findUnique({ where: { id: id as string } });
 
     if (!room) {
       return res.status(404).json({ error: 'Room not found' });
@@ -77,7 +77,7 @@ export const deleteRoom = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    await prisma.room.delete({ where: { id } });
+    await prisma.room.delete({ where: { id: id as string } });
 
     res.json({ message: 'Room deleted successfully' });
   } catch (error) {
@@ -90,7 +90,7 @@ export const toggleVisibility = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const userId = req.userId!;
 
-    const room = await prisma.room.findUnique({ where: { id } });
+    const room = await prisma.room.findUnique({ where: { id: id as string } });
 
     if (!room) {
       return res.status(404).json({ error: 'Room not found' });
@@ -101,7 +101,7 @@ export const toggleVisibility = async (req: AuthRequest, res: Response) => {
     }
 
     const updatedRoom = await prisma.room.update({
-      where: { id },
+      where: { id: id as string },
       data: { isPublic: !room.isPublic },
     });
 

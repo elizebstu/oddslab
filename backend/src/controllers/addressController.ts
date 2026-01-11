@@ -15,7 +15,7 @@ export const addAddresses = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Addresses array is required' });
     }
 
-    const room = await prisma.room.findUnique({ where: { id: roomId } });
+    const room = await prisma.room.findUnique({ where: { id: roomId as string } });
 
     if (!room) {
       return res.status(404).json({ error: 'Room not found' });
@@ -36,9 +36,9 @@ export const addAddresses = async (req: AuthRequest, res: Response) => {
     const createdAddresses = await Promise.all(
       addresses.map(address =>
         prisma.address.upsert({
-          where: { address_roomId: { address, roomId } },
+          where: { address_roomId: { address, roomId: roomId as string } },
           update: {},
-          create: { address, roomId },
+          create: { address, roomId: roomId as string }
         })
       )
     );
@@ -54,7 +54,7 @@ export const removeAddress = async (req: AuthRequest, res: Response) => {
     const { roomId, addressId } = req.params;
     const userId = req.userId!;
 
-    const room = await prisma.room.findUnique({ where: { id: roomId } });
+    const room = await prisma.room.findUnique({ where: { id: roomId as string } });
 
     if (!room) {
       return res.status(404).json({ error: 'Room not found' });
@@ -64,7 +64,7 @@ export const removeAddress = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    await prisma.address.delete({ where: { id: addressId } });
+    await prisma.address.delete({ where: { id: addressId as string } });
 
     res.json({ message: 'Address removed successfully' });
   } catch (error) {
@@ -77,7 +77,7 @@ export const getAddresses = async (req: AuthRequest, res: Response) => {
     const { roomId } = req.params;
 
     const room = await prisma.room.findUnique({
-      where: { id: roomId },
+      where: { id: roomId as string },
       include: { addresses: true },
     });
 

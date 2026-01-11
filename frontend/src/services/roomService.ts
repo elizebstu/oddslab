@@ -68,4 +68,5 @@ export interface Activity {
   market: string;
   amount: number;
   timestamp: string;
+  userName?: string;
 }

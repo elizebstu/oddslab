@@ -10,7 +10,7 @@ export const getActivities = async (req: AuthRequest, res: Response) => {
     const { roomId } = req.params;
 
     const room = await prisma.room.findUnique({
-      where: { id: roomId },
+      where: { id: roomId as string },
       include: { addresses: true },
     });
 

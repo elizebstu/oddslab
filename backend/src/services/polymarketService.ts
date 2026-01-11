@@ -1,11 +1,12 @@
 import axios from 'axios';
 
-interface Activity {
+export interface Activity {
   address: string;
   type: 'buy' | 'sell' | 'redeem';
   market: string;
   amount: number;
   timestamp: string;
+  userName?: string;
 }
 
 interface PolymarketTrade {
@@ -24,8 +25,55 @@ interface PolymarketTrade {
 }
 
 const activityCache = new Map<string, { data: Activity[]; timestamp: number }>();
+const profileCache = new Map<string, { data: { name?: string; username?: string } | null; timestamp: number }>();
 const CACHE_TTL = 60000; // 60 seconds
 const POLYMARKET_DATA_API = 'https://data-api.polymarket.com';
+const POLYMARKET_GAMMA_API = 'https://gamma-api.polymarket.com';
+
+interface PolymarketProfile {
+  displayUsernamePublic?: string;
+  pseudonym?: string;
+  name?: string;
+  profileImage?: string;
+  createdAt?: string;
+  proxyWallet?: string;
+}
+
+/**
+ * Fetch user profile by wallet address from Polymarket Gamma API
+ */
+export const fetchPolymarketProfile = async (
+  address: string
+): Promise<{ name?: string; username?: string } | null> => {
+  const cached = profileCache.get(address);
+
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  try {
+    const response = await axios.get<PolymarketProfile>(`${POLYMARKET_GAMMA_API}/public-profile`, {
+      params: {
+        address: address.toLowerCase(),
+      },
+      timeout: 10000,
+    });
+
+    const profile = response.data;
+    const result = {
+      name: profile.name,
+      username: profile.displayUsernamePublic || profile.pseudonym,
+    };
+
+    profileCache.set(address, { data: result, timestamp: Date.now() });
+
+    return result;
+  } catch (error: any) {
+    console.error(`Error fetching profile for address ${address}:`, error.message);
+    profileCache.set(address, { data: null, timestamp: Date.now() });
+    return null;
+  }
+};
 
 export const fetchPolymarketActivities = async (addresses: string[]): Promise<Activity[]> => {
   const cacheKey = addresses.sort().join(',');
@@ -38,6 +86,18 @@ export const fetchPolymarketActivities = async (addresses: string[]): Promise<Ac
   try {
     const allActivities: Activity[] = [];
     const oneDayAgo = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000); // 24 hours ago in seconds
+
+    // Fetch user profiles for all addresses in parallel
+    const profilePromises = addresses.map((addr) => fetchPolymarketProfile(addr));
+    const profiles = await Promise.all(profilePromises);
+    const profileMap = new Map<string, string | undefined>();
+    addresses.forEach((addr, idx) => {
+      const profile = profiles[idx];
+      const displayName = profile?.name || profile?.username;
+      if (displayName) {
+        profileMap.set(addr.toLowerCase(), displayName);
+      }
+    });
 
     for (const address of addresses) {
       try {
@@ -69,6 +129,7 @@ export const fetchPolymarketActivities = async (addresses: string[]): Promise<Ac
               market: trade.title,
               amount: Math.round(amount * 100) / 100,
               timestamp: new Date(trade.timestamp * 1000).toISOString(),
+              userName: profileMap.get(address.toLowerCase()),
             } as Activity;
           });
 
