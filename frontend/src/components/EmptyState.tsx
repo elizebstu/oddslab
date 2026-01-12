@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import Button from './ui/Button';
 
 interface EmptyStateProps {
   icon?: React.ReactNode;
@@ -13,30 +13,23 @@ interface EmptyStateProps {
 
 export default function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="text-center py-16 px-6 bg-white border-2 border-dashed border-surface-200 rounded-3xl">
+    <div className="text-center py-20 px-8 bg-surface-50 border border-surface-200 rounded-[2.5rem] shadow-inner">
       {icon && (
-        <div className="w-16 h-16 rounded-2xl bg-primary-50 flex items-center justify-center mx-auto mb-6">
+        <div className="w-20 h-20 rounded-3xl bg-white shadow-sm ring-1 ring-black/5 flex items-center justify-center mx-auto mb-8 text-primary-500">
           {icon}
         </div>
       )}
-      <h3 className="text-lg font-semibold mb-2 text-surface-900">{title}</h3>
-      <p className="text-surface-500 mb-6 max-w-sm mx-auto">{description}</p>
+      <h3 className="text-2xl font-display font-bold mb-3 text-surface-900">{title}</h3>
+      <p className="text-surface-500 mb-10 max-w-sm mx-auto font-medium leading-relaxed">{description}</p>
       {action && (
-        action.href ? (
-          <Link
-            to={action.href}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white px-6 py-3 rounded-full text-sm font-medium hover:from-primary-700 hover:to-primary-600 transition-all hover:shadow-lg hover:shadow-primary-500/25"
-          >
-            {action.label}
-          </Link>
-        ) : (
-          <button
-            onClick={action.onClick}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white px-6 py-3 rounded-full text-sm font-medium hover:from-primary-700 hover:to-primary-600 transition-all hover:shadow-lg hover:shadow-primary-500/25"
-          >
-            {action.label}
-          </button>
-        )
+        <Button
+          onClick={action.onClick}
+          to={action.href}
+          size="lg"
+          className="px-10 shadow-glow"
+        >
+          {action.label}
+        </Button>
       )}
     </div>
   );

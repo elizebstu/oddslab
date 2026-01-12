@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
 import RoomCard from '../components/RoomCard';
 import LoadingSpinner from '../components/LoadingSpinner';
-import EmptyState from '../components/EmptyState';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Modal from '../components/ui/Modal';
 import { roomService } from '../services/roomService';
 import type { Room } from '../services/roomService';
 
@@ -40,14 +41,14 @@ export default function Dashboard() {
       loadRooms();
     } catch (error) {
       console.error('Failed to create room:', error);
-      setError('Failed to create room. Please try again.');
+      setError('Room name exists or is invalid.');
     } finally {
       setCreating(false);
     }
   };
 
   const handleDeleteRoom = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this room? This action cannot be undone.')) return;
+    if (!confirm('Are you sure you want to delete this room? This cannot be undone.')) return;
     try {
       await roomService.deleteRoom(id);
       loadRooms();
@@ -57,116 +58,122 @@ export default function Dashboard() {
   };
 
   if (loading) {
-    return <LoadingSpinner fullScreen text="Loading your rooms..." />;
+    return <LoadingSpinner fullScreen text="Loading Dashboard..." />;
   }
 
   return (
-    <div className="min-h-screen bg-surface-50 text-surface-900 font-sans selection:bg-primary-500 selection:text-white">
-      <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">My Rooms</h1>
-            <p className="text-surface-500">Manage your wallet tracking spaces</p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 relative animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-16 border-l-4 border-neon-cyan pl-6 py-2">
+        <div className="space-y-1">
+          <h1 className="text-4xl md:text-5xl font-display font-black uppercase tracking-tighter italic text-white">
+            DASH<span className="text-neon-cyan glow-text-cyan">BOARD</span>
+          </h1>
+          <div className="flex items-center gap-4 text-white/30 text-[10px] font-bold uppercase tracking-[0.2em]">
+            <span>{rooms.length} Active Rooms</span>
+            <span className="w-1 h-1 bg-white/10 rounded-full" />
+            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-pulse" /> Network Optimal</span>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:from-primary-700 hover:to-primary-600 transition-all hover:shadow-lg hover:shadow-primary-500/25"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Create Room
-          </button>
         </div>
-
-        {/* Room Grid */}
-        {rooms.length === 0 ? (
-          <EmptyState
-            icon={
-              <svg className="w-8 h-8 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            }
-            title="No rooms yet"
-            description="Create your first room to start tracking wallets on Polymarket"
-            action={{ label: "Create Your First Room", onClick: () => setShowModal(true) }}
-          />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {rooms.map((room) => (
-              <RoomCard
-                key={room.id}
-                room={room}
-                showActions
-                onDelete={handleDeleteRoom}
-              />
-            ))}
-          </div>
-        )}
+        <Button
+          onClick={() => setShowModal(true)}
+          size="lg"
+          variant="primary"
+          className="h-14 px-10"
+        >
+          Create New Room
+        </Button>
       </div>
 
-      {/* Create Room Modal */}
-      {showModal && (
-        <div
-          className="fixed inset-0 bg-primary-950/20 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => !creating && setShowModal(false)}
-        >
-          <div
-            className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-xl font-bold mb-2 tracking-tight">Create New Room</h3>
-            <p className="text-sm text-surface-500 mb-6">Give your room a name to get started</p>
-            <form onSubmit={handleCreateRoom}>
-              <div className="mb-6">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-surface-500 mb-2">
-                  Room Name
-                </label>
-                <input
-                  type="text"
-                  value={roomName}
-                  onChange={(e) => setRoomName(e.target.value)}
-                  placeholder="e.g., Top Traders"
-                  required
-                  autoFocus
-                  disabled={creating}
-                  className="w-full px-4 py-3 bg-surface-50 border border-surface-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-300 transition-all disabled:opacity-50"
-                />
-                {error && (
-                  <p className="mt-2 text-sm text-red-600">{error}</p>
-                )}
-              </div>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  disabled={creating}
-                  className="flex-1 px-4 py-3 border border-surface-200 rounded-xl text-sm font-medium hover:bg-surface-50 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating || !roomName.trim()}
-                  className="flex-1 bg-gradient-to-r from-primary-600 to-primary-500 text-white px-4 py-3 rounded-xl text-sm font-medium hover:from-primary-700 hover:to-primary-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {creating ? (
-                    <>
-                      <LoadingSpinner size="sm" />
-                      Creating...
-                    </>
-                  ) : (
-                    'Create Room'
-                  )}
-                </button>
-              </div>
-            </form>
+      {/* Main Grid */}
+      {rooms.length === 0 ? (
+        <div className="bg-midnight-900/50 border border-white/10 p-20 text-center relative overflow-hidden group">
+          <div className="w-20 h-20 bg-midnight-800 border border-white/10 flex items-center justify-center mx-auto mb-10 skew-x-[-6deg] group-hover:border-neon-cyan transition-all">
+            <div className="skew-x-[6deg] text-white/20">
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
           </div>
+          <h2 className="text-2xl font-black uppercase tracking-tighter mb-4 italic text-white/80">No Rooms Found</h2>
+          <p className="text-white/40 max-w-sm mx-auto mb-10 text-xs font-bold uppercase tracking-widest leading-relaxed">
+            Create your first room to track whale movements and prediction market alerts.
+          </p>
+          <Button onClick={() => setShowModal(true)} variant="cyber" className="px-10">
+            Create First Room
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {rooms.map((room) => (
+            <RoomCard
+              key={room.id}
+              room={room}
+              showActions
+              onDelete={handleDeleteRoom}
+            />
+          ))}
+
+          {/* Add New Room Card */}
+          <button
+            onClick={() => setShowModal(true)}
+            className="group flex flex-col items-center justify-center p-8 border border-dashed border-white/10 bg-midnight-950/30 hover:bg-midnight-900 hover:border-neon-cyan/50 transition-all min-h-[260px] skew-x-[-2deg]"
+          >
+            <div className="skew-x-[2deg] flex flex-col items-center">
+              <div className="w-12 h-12 bg-midnight-900 border border-white/10 flex items-center justify-center mb-6 skew-x-[-6deg] group-hover:border-neon-cyan transition-all">
+                <div className="skew-x-[6deg] text-white/20 group-hover:text-neon-cyan">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/20 group-hover:text-white transition-colors">Add New Room</span>
+            </div>
+          </button>
         </div>
       )}
+
+      {/* Create Room Modal */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => !creating && setShowModal(false)}
+        title="Create Room"
+        footer={
+          <div className="flex gap-3 w-full">
+            <Button
+              variant="outline"
+              onClick={() => setShowModal(false)}
+              disabled={creating}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateRoom}
+              disabled={creating || !roomName.trim()}
+              isLoading={creating}
+              className="flex-1"
+            >
+              Create
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-6">
+          <p className="text-[11px] text-white/40 uppercase tracking-widest font-bold leading-relaxed">
+            Give your room a name to identify it in your dashboard.
+          </p>
+          <Input
+            label="Room Name"
+            value={roomName}
+            onChange={(e) => setRoomName(e.target.value)}
+            placeholder="e.g. My Whale Alerts"
+            autoFocus
+            disabled={creating}
+            error={error}
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

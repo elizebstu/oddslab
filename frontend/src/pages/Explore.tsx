@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
 import LoadingSpinner from '../components/LoadingSpinner';
-import EmptyState from '../components/EmptyState';
+import Button from '../components/ui/Button';
+import RoomCard from '../components/RoomCard';
 import { roomService } from '../services/roomService';
 import type { Room } from '../services/roomService';
 
@@ -32,7 +31,6 @@ export default function Explore() {
   const filteredAndSortedRooms = useMemo(() => {
     let result = [...rooms];
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(room =>
@@ -40,7 +38,6 @@ export default function Explore() {
       );
     }
 
-    // Sort
     switch (sortBy) {
       case 'recent':
         result.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
@@ -56,161 +53,82 @@ export default function Explore() {
     return result;
   }, [rooms, searchQuery, sortBy]);
 
-  return (
-    <div className="min-h-screen bg-surface-50 text-surface-900 font-sans selection:bg-primary-500 selection:text-white">
-      <Navbar />
+  if (loading) {
+    return <LoadingSpinner fullScreen text="Loading Public Rooms..." />;
+  }
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="flex items-center gap-1.5 text-sm font-medium text-accent-700 bg-accent-50 px-3 py-1.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent-500"></span>
-              Public Rooms
-            </span>
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Explore</h1>
-          <p className="text-surface-500">Discover watchlists shared by the community</p>
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 animate-fade-in">
+      {/* Header */}
+      <div className="mb-16 text-center max-w-2xl mx-auto space-y-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-neon-cyan/10 border border-neon-cyan/20 skew-x-[-6deg]">
+          <span className="w-1.5 h-1.5 bg-neon-cyan animate-pulse shadow-neon-cyan" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-neon-cyan skew-x-[6deg]">Public Network</span>
+        </div>
+        <h1 className="text-5xl md:text-6xl font-display font-black uppercase tracking-tighter italic text-white flex justify-center gap-3">
+          EXPLORE <span className="text-neon-cyan glow-text-cyan">ROOMS</span>
+        </h1>
+        <p className="text-base text-white/40 font-bold uppercase tracking-tight leading-relaxed">
+          Access shared rooms from across the network. Find the most profitable whale tracking configurations.
+        </p>
+      </div>
+
+      {/* Control Bar */}
+      <div className="flex flex-col lg:flex-row items-center gap-6 mb-16 bg-midnight-900 border border-white/5 p-6 skew-x-[-2deg]">
+        <div className="relative flex-1 w-full skew-x-[2deg]">
+          <svg className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search rooms or markets..."
+            className="w-full h-12 pl-14 pr-6 bg-midnight-950 border border-white/5 focus:border-neon-cyan transition-all outline-none text-white font-mono text-sm placeholder:text-white/20"
+          />
         </div>
 
-        {/* Search and Filter Bar */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          {/* Search Input */}
-          <div className="relative flex-1 max-w-md">
-            <svg
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search rooms..."
-              className="w-full pl-12 pr-4 py-3 bg-white border border-surface-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-300 transition-all"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-
-          {/* Sort Dropdown */}
-          <div className="relative">
+        <div className="flex items-center gap-6 w-full lg:w-auto skew-x-[2deg]">
+          <div className="relative shrink-0">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="appearance-none w-full sm:w-48 px-4 py-3 pr-10 bg-white border border-surface-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-300 transition-all text-sm font-medium cursor-pointer"
+              className="appearance-none h-12 pl-6 pr-12 bg-midnight-950 border border-white/10 hover:border-white/20 transition-all outline-none text-[10px] font-bold uppercase tracking-widest text-white/50 cursor-pointer min-w-[180px]"
             >
-              <option value="recent">Most Recent</option>
-              <option value="addresses">Most Addresses</option>
-              <option value="name">Alphabetical</option>
+              <option value="recent">Sort: Newest</option>
+              <option value="addresses">Sort: Top Addresses</option>
+              <option value="name">Sort: A-Z</option>
             </select>
-            <svg
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400 pointer-events-none"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            <svg className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
             </svg>
+          </div>
+
+          <div className="h-12 px-6 flex items-center bg-neon-cyan text-midnight-950 font-black text-[10px] uppercase tracking-[0.2em] skew-x-[-6deg] shrink-0 whitespace-nowrap">
+            <span className="skew-x-[6deg]">{filteredAndSortedRooms.length} ROOMS ACTIVE</span>
           </div>
         </div>
-
-        {/* Results Count */}
-        {!loading && rooms.length > 0 && (
-          <div className="mb-6 text-sm text-surface-500">
-            {searchQuery ? (
-              <>
-                Showing {filteredAndSortedRooms.length} of {rooms.length} rooms
-                {filteredAndSortedRooms.length === 0 && (
-                  <span className="ml-2">
-                    — <button onClick={() => setSearchQuery('')} className="text-surface-900 hover:underline">Clear search</button>
-                  </span>
-                )}
-              </>
-            ) : (
-              <>{rooms.length} public {rooms.length === 1 ? 'room' : 'rooms'}</>
-            )}
-          </div>
-        )}
-
-        {/* Content */}
-        {loading ? (
-          <div className="flex justify-center py-24">
-            <LoadingSpinner text="Loading rooms..." />
-          </div>
-        ) : rooms.length === 0 ? (
-          <EmptyState
-            icon={
-              <svg className="w-8 h-8 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            }
-            title="No public rooms yet"
-            description="Be the first to create and share a room with the community"
-            action={{ label: "Create the First Room", href: "/register" }}
-          />
-        ) : filteredAndSortedRooms.length === 0 ? (
-          <div className="text-center py-16 bg-white border border-surface-200 rounded-3xl">
-            <svg className="w-12 h-12 text-surface-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <h3 className="text-lg font-semibold mb-2">No rooms found</h3>
-            <p className="text-surface-500 mb-4">No rooms match "{searchQuery}"</p>
-            <button
-              onClick={() => setSearchQuery('')}
-              className="text-sm font-medium text-surface-900 hover:underline"
-            >
-              Clear search
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredAndSortedRooms.map((room) => (
-              <Link
-                key={room.id}
-                to={`/public/${room.id}`}
-                className="group bg-white border border-surface-200 rounded-3xl p-6 hover:border-primary-200 hover:shadow-card-hover transition-all duration-300"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-lg font-semibold tracking-tight text-surface-900 group-hover:text-surface-950 transition-colors">
-                    {room.name}
-                  </h3>
-                  <span className="flex items-center gap-1.5 text-xs font-medium text-accent-700 bg-accent-50 px-2.5 py-1 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent-500"></span>
-                    Public
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 text-sm text-surface-500 mb-6">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span>{room.addresses?.length || 0} {(room.addresses?.length || 0) === 1 ? 'address' : 'addresses'}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs text-surface-400 border-t border-surface-100 pt-4">
-                  <span>Updated {new Date(room.updatedAt).toLocaleDateString()}</span>
-                  <svg className="w-4 h-4 text-surface-300 group-hover:text-surface-500 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
       </div>
+
+      {rooms.length === 0 ? (
+        <div className="py-24 text-center border border-dashed border-white/10">
+          <p className="text-xl font-black text-white/20 uppercase italic tracking-tighter">No public rooms available.</p>
+        </div>
+      ) : filteredAndSortedRooms.length === 0 ? (
+        <div className="py-24 text-center">
+          <p className="text-lg font-black text-white/20 uppercase tracking-widest mb-8">No matches for "{searchQuery}"</p>
+          <Button variant="ghost" onClick={() => setSearchQuery('')}>Clear Search</Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredAndSortedRooms.map((room) => (
+            <RoomCard
+              key={room.id}
+              room={room}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

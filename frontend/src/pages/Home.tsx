@@ -1,277 +1,147 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import RoomCard from '../components/RoomCard';
-import LoadingSpinner from '../components/LoadingSpinner';
-import { roomService } from '../services/roomService';
-import type { Room } from '../services/roomService';
-import { useAuth } from '../hooks/useAuth';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
 
 export default function Home() {
-  const { user } = useAuth();
-  const [featuredRooms, setFeaturedRooms] = useState<Room[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadFeaturedRooms();
-  }, []);
-
-  const loadFeaturedRooms = async () => {
-    try {
-      const rooms = await roomService.getPublicRooms();
-      // Show top 6 rooms with most addresses
-      const sorted = rooms
-        .sort((a, b) => (b.addresses?.length || 0) - (a.addresses?.length || 0))
-        .slice(0, 6);
-      setFeaturedRooms(sorted);
-    } catch (error) {
-      console.error('Failed to load featured rooms:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-surface-50 text-surface-900 font-sans selection:bg-primary-500 selection:text-white">
-      <Navbar />
+    <div className="relative flex flex-col">
+      {/* HERO SECTION */}
+      <section className="relative pt-32 pb-40 overflow-hidden border-b border-white/5">
+        <div className="absolute inset-0 bg-hero-gradient pointer-events-none" />
 
-      {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        {/* Gradient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-accent-50" />
-        <div className="absolute inset-0 bg-grid-pattern bg-grid opacity-30" />
+        {/* Animated Light Trails - Subtler */}
+        <div className="absolute top-1/4 left-[-10%] w-[120%] h-[1px] bg-gradient-to-r from-transparent via-neon-cyan/10 to-transparent rotate-[-15deg] animate-pulse" />
+        <div className="absolute top-3/4 left-[-10%] w-[120%] h-[1px] bg-gradient-to-r from-transparent via-neon-purple/10 to-transparent rotate-[15deg] animate-pulse" style={{ animationDelay: '1s' }} />
 
-        {/* Decorative blobs */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-primary-400/20 rounded-full blur-3xl" />
-        <div className="absolute top-40 right-20 w-96 h-96 bg-accent-400/20 rounded-full blur-3xl" />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
           <div className="max-w-3xl">
-            {/* Status Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-primary-100 text-sm text-primary-700 mb-6 animate-fade-in shadow-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-500"></span>
-              </span>
-              Live Polymarket Data
+            <div className="inline-flex items-center gap-2 mb-8 px-3 py-1 bg-midnight-900 border border-neon-cyan/30 skew-x-[-6deg]">
+              <span className="w-1.5 h-1.5 bg-neon-cyan animate-pulse shadow-neon-cyan skew-x-[6deg]" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-neon-cyan skew-x-[6deg]">Live Network Active</span>
             </div>
 
-            {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-[1.1] animate-slide-up">
-              Track Smart Money
-              <br />
-              <span className="bg-gradient-to-r from-primary-600 via-primary-500 to-accent-500 bg-clip-text text-transparent">
-                on Polymarket
-              </span>
+            <h1 className="text-6xl md:text-7xl font-display font-black tracking-tighter mb-8 leading-[0.9] uppercase text-white">
+              Watch the <span className="text-neon-cyan glow-text-cyan">Whales</span>,<br />
+              Win the <span className="text-neon-green glow-text-green">Trades.</span>
             </h1>
 
-            {/* Subheadline */}
-            <p className="text-lg sm:text-xl text-surface-600 mb-8 max-w-xl leading-relaxed">
-              Follow the most profitable traders. Create watchlists. Monitor positions and trades in real-time.
+            <p className="text-lg md:text-xl text-white/50 mb-12 max-w-xl leading-relaxed uppercase font-bold italic tracking-tight">
+              Real-time intelligence for high-stakes markets. Track the most profitable traders on Polymarket.
             </p>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              {user ? (
-                <Link
-                  to="/dashboard"
-                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white px-6 py-3.5 rounded-xl text-base font-medium hover:from-primary-700 hover:to-primary-600 transition-all hover:shadow-xl hover:shadow-primary-500/25 hover:-translate-y-0.5"
-                >
-                  Go to Dashboard
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    to="/register"
-                    className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white px-6 py-3.5 rounded-xl text-base font-medium hover:from-primary-700 hover:to-primary-600 transition-all hover:shadow-xl hover:shadow-primary-500/25 hover:-translate-y-0.5"
-                  >
-                    Start Tracking
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </Link>
-                  <Link
-                    to="/explore"
-                    className="inline-flex items-center justify-center gap-2 bg-white text-surface-900 border border-surface-200 px-6 py-3.5 rounded-xl text-base font-medium hover:bg-surface-50 hover:border-surface-300 transition-all shadow-sm"
-                  >
-                    Explore Rooms
-                  </Link>
-                </>
-              )}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button size="lg" variant="primary" to="/register" className="h-14 px-8">
+                Sign Up Now
+              </Button>
+              <Button size="lg" variant="cyber" to="/explore" className="h-14 px-8">
+                Explore Rooms
+              </Button>
             </div>
           </div>
+        </div>
 
-          {/* Stats */}
-          <div className="mt-16 grid grid-cols-3 gap-4 sm:gap-8 max-w-lg">
-            <div className="text-center sm:text-left">
-              <div className="text-2xl sm:text-3xl font-bold text-surface-900">{featuredRooms.length}+</div>
-              <div className="text-sm text-surface-500">Public Rooms</div>
-            </div>
-            <div className="text-center sm:text-left">
-              <div className="text-2xl sm:text-3xl font-bold text-surface-900">
-                {featuredRooms.reduce((sum, r) => sum + (r.addresses?.length || 0), 0)}+
+        {/* Floating Stat Card - Enlarged and Adjusted */}
+        <div className="hidden lg:block absolute right-24 top-1/2 -translate-y-1/2 animate-float">
+          <Card className="w-80 p-8 border-white/10 bg-midnight-950/80 backdrop-blur-md skew-x-[-6deg] shadow-neon-cyan/20">
+            <div className="skew-x-[6deg]">
+              <div className="flex justify-between items-start mb-6">
+                <span className="text-[10px] font-bold text-neon-cyan uppercase tracking-widest">Global Profits</span>
+                <span className="text-[10px] font-mono text-white/20">24H</span>
               </div>
-              <div className="text-sm text-surface-500">Wallets Tracked</div>
+              <div className="text-5xl font-mono font-black text-neon-green">+$2.48M</div>
+              <div className="mt-3 text-[10px] text-white/40 uppercase font-bold tracking-widest">Aggregate Whale Earnings</div>
             </div>
-            <div className="text-center sm:text-left">
-              <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-accent-600 to-accent-500 bg-clip-text text-transparent">Live</div>
-              <div className="text-sm text-surface-500">Data Feed</div>
-            </div>
-          </div>
+          </Card>
         </div>
-      </div>
+      </section>
 
-      {/* Featured Rooms Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight mb-2">Featured Rooms</h2>
-            <p className="text-surface-500">Explore curated watchlists from the community</p>
-          </div>
-          <Link
-            to="/explore"
-            className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
-          >
-            View all
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <LoadingSpinner text="Loading rooms..." />
-          </div>
-        ) : featuredRooms.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredRooms.map((room) => (
-                <RoomCard key={room.id} room={room} />
-              ))}
-            </div>
-            <div className="mt-8 text-center sm:hidden">
-              <Link
-                to="/explore"
-                className="inline-flex items-center gap-2 text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
-              >
-                View all rooms
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </Link>
-            </div>
-          </>
-        ) : (
-          <div className="bg-white border border-surface-200 rounded-3xl p-12 text-center shadow-card">
-            <div className="w-16 h-16 rounded-2xl bg-primary-50 flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold mb-2">No public rooms yet</h3>
-            <p className="text-surface-500 mb-6">Be the first to create and share a room</p>
-            <Link
-              to="/register"
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white px-6 py-3 rounded-full text-sm font-medium hover:from-primary-700 hover:to-primary-600 transition-all shadow-lg shadow-primary-500/25"
-            >
-              Create Your First Room
-            </Link>
-          </div>
-        )}
-      </div>
-
-      {/* Features Section */}
-      <div className="bg-white border-t border-surface-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">Why Oddslab?</h2>
-            <p className="text-surface-500 max-w-xl mx-auto">
-              Everything you need to follow and analyze Polymarket's top performers
-            </p>
+      {/* FEATURES SECTION */}
+      <section className="py-32 bg-midnight-900 border-b border-white/5 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-4 italic text-white flex justify-center gap-3">
+              THE <span className="text-neon-cyan">ADVANTAGE</span>
+            </h2>
+            <p className="text-white/30 font-bold uppercase tracking-[0.3em] text-[10px]">Real-Time Edge in Prediction Markets</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="group text-center p-6">
-              <div className="w-14 h-14 rounded-2xl bg-primary-50 flex items-center justify-center mx-auto mb-5 group-hover:bg-gradient-to-br group-hover:from-primary-500 group-hover:to-primary-600 transition-all duration-300">
-                <svg className="w-7 h-7 text-primary-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Discover Traders</h3>
-              <p className="text-surface-500 text-sm leading-relaxed">
-                Find wallets by address or Polymarket username. Track anyone with a public trading history.
-              </p>
-            </div>
-
-            <div className="group text-center p-6">
-              <div className="w-14 h-14 rounded-2xl bg-accent-50 flex items-center justify-center mx-auto mb-5 group-hover:bg-gradient-to-br group-hover:from-accent-500 group-hover:to-accent-600 transition-all duration-300">
-                <svg className="w-7 h-7 text-accent-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Analyze Positions</h3>
-              <p className="text-surface-500 text-sm leading-relaxed">
-                View aggregated positions with P&L tracking. See what the smart money is betting on.
-              </p>
-            </div>
-
-            <div className="group text-center p-6">
-              <div className="w-14 h-14 rounded-2xl bg-success-50 flex items-center justify-center mx-auto mb-5 group-hover:bg-gradient-to-br group-hover:from-success-500 group-hover:to-success-600 transition-all duration-300">
-                <svg className="w-7 h-7 text-success-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Real-time Updates</h3>
-              <p className="text-surface-500 text-sm leading-relaxed">
-                Get live activity feeds showing every buy, sell, and redemption as they happen.
-              </p>
-            </div>
+            {[
+              {
+                id: '01',
+                title: 'Whale Tracking',
+                desc: 'Real-time monitoring of the world\'s most successful prediction market traders.',
+                glow: 'neon-green',
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                )
+              },
+              {
+                id: '02',
+                title: 'Market Intelligence',
+                desc: 'Merged chain data and market sentiment to reveal hidden trends before they move.',
+                glow: 'neon-cyan',
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                )
+              },
+              {
+                id: '03',
+                title: 'Risk Management',
+                desc: 'Advanced detection of bot activity and market manipulation to protect your capital.',
+                glow: 'neon-purple',
+                icon: (
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                )
+              }
+            ].map((feature) => (
+              <Card key={feature.id} hover className="p-10 border-white/5 bg-midnight-950/40">
+                <div className="flex flex-col h-full">
+                  <div className={`w-12 h-12 mb-8 skew-x-[-6deg] bg-midnight-800 border-2 border-white/5 flex items-center justify-center text-white`}>
+                    <div className="skew-x-[6deg]">{feature.icon}</div>
+                  </div>
+                  <h3 className={`text-2xl font-black uppercase tracking-tighter mb-4 text-white hover:text-neon-cyan transition-colors`}>
+                    {feature.title}
+                  </h3>
+                  <p className="text-white/40 text-sm font-medium leading-relaxed uppercase tracking-wide">
+                    {feature.desc}
+                  </p>
+                </div>
+              </Card>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* CTA Section */}
-      {!user && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-          <div className="relative overflow-hidden bg-gradient-to-r from-primary-600 via-primary-500 to-accent-500 rounded-3xl p-8 sm:p-12 text-center">
-            <div className="absolute inset-0 bg-grid-pattern bg-grid opacity-10" />
-            <div className="relative">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">Ready to start tracking?</h2>
-              <p className="text-primary-100 mb-8 max-w-lg mx-auto">
-                Create your free account and build your first watchlist in under a minute.
-              </p>
-              <Link
-                to="/register"
-                className="inline-flex items-center justify-center gap-2 bg-white text-primary-600 px-8 py-4 rounded-xl text-base font-medium hover:bg-primary-50 transition-all hover:shadow-xl"
-              >
-                Get Started Free
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* CTA SECTION */}
+      <section className="py-32 relative overflow-hidden text-center">
+        <div className="absolute inset-0 bg-midnight-950 pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[300px] bg-neon-cyan/5 blur-[120px] pointer-events-none" />
 
-      {/* Footer */}
-      <footer className="border-t border-surface-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-2.5">
-              <img src="/logo.jpeg" alt="Oddslab" className="w-6 h-6 rounded" />
-              <span className="font-semibold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">Oddslab</span>
-            </div>
-            <p className="text-sm text-surface-400">
-              Track smart money on Polymarket prediction markets
-            </p>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 relative z-10">
+          <h2 className="text-5xl md:text-6xl font-black uppercase tracking-tighter mb-10 leading-[0.9] text-white">
+            READY TO JOIN THE <span className="text-neon-cyan glow-text-cyan">1%?</span>
+          </h2>
+
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Button size="lg" variant="primary" to="/register" className="h-16 px-12">
+              Get Started
+            </Button>
+            <Button size="lg" variant="outline" to="/login" className="h-16 px-12">
+              Login
+            </Button>
           </div>
+
+          <p className="mt-12 text-[10px] font-bold text-white/20 uppercase tracking-[0.4em]">
+            Oddslab • Real-Time Whale Intel
+          </p>
         </div>
-      </footer>
+      </section>
     </div>
   );
 }

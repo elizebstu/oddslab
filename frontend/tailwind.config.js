@@ -1,115 +1,106 @@
 /** @type {import('tailwindcss').Config} */
+import colors from 'tailwindcss/colors'
+
 export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
+    colors: {
+      transparent: 'transparent',
+      current: 'currentColor',
+      black: colors.black,
+      white: colors.white,
+      midnight: {
+        950: '#020202',
+        900: '#050505',
+        800: '#0a0a0c',
+        700: '#121217',
+        600: '#1a1a23',
+      },
+      neon: {
+        green: '#00ff88',
+        cyan: '#00f0ff',
+        purple: '#bf00ff',
+        pink: '#ff007a',
+        red: '#ff003c',
+        yellow: '#fffb00',
+      },
+      // Include standard colors used in the app
+      gray: colors.gray,
+      blue: colors.blue,
+      red: colors.red,
+      green: colors.green,
+      primary: {
+        50: '#f0f4ff',
+        100: '#e0e9ff',
+        500: '#6366f1',
+        600: '#4f46e5',
+        700: '#4338ca',
+        950: '#0a0a1a',
+      },
+      surface: {
+        50: '#f8fafc',
+        100: '#f1f5f9',
+        200: '#e2e8f0',
+        300: '#cbd5e1',
+        400: '#94a3b8',
+        500: '#64748b',
+        900: '#0f172a',
+        950: '#020617',
+      }
+    },
     extend: {
       fontFamily: {
+        display: ['Space Grotesk', 'Outfit', 'system-ui', 'sans-serif'],
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Menlo', 'monospace'],
       },
-      colors: {
-        // Primary brand color - vibrant indigo/purple
-        primary: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
-        },
-        // Secondary - teal for accents
-        accent: {
-          50: '#f0fdfa',
-          100: '#ccfbf1',
-          200: '#99f6e4',
-          300: '#5eead4',
-          400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a',
-        },
-        // Success green
-        success: {
-          50: '#ecfdf5',
-          100: '#d1fae5',
-          200: '#a7f3d0',
-          300: '#6ee7b7',
-          400: '#34d399',
-          500: '#10b981',
-          600: '#059669',
-          700: '#047857',
-          800: '#065f46',
-          900: '#064e3b',
-        },
-        // Neutral surface colors
-        surface: {
-          0: '#ffffff',
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617',
-        },
-      },
       boxShadow: {
-        'glow': '0 0 20px rgba(99, 102, 241, 0.15)',
-        'glow-lg': '0 0 40px rgba(99, 102, 241, 0.2)',
-        'glow-accent': '0 0 20px rgba(20, 184, 166, 0.15)',
-        'card': '0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)',
-        'card-hover': '0 4px 12px rgba(99, 102, 241, 0.1), 0 16px 32px rgba(0,0,0,0.08)',
-        'nav': '0 1px 3px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.04)',
-      },
-      animation: {
-        'fade-in': 'fadeIn 0.5s ease-out',
-        'slide-up': 'slideUp 0.5s ease-out',
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'shimmer': 'shimmer 2s linear infinite',
-        'gradient': 'gradient 8s linear infinite',
-      },
-      keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        slideUp: {
-          '0%': { opacity: '0', transform: 'translateY(10px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        shimmer: {
-          '0%': { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
-        },
-        gradient: {
-          '0%, 100%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
-        },
+        'neon-green': '0 0 15px rgba(0, 255, 136, 0.4)',
+        'neon-cyan': '0 0 15px rgba(0, 240, 255, 0.4)',
+        'neon-purple': '0 0 15px rgba(191, 0, 255, 0.4)',
+        'neon-red': '0 0 15px rgba(255, 0, 60, 0.4)',
+        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.8)',
       },
       backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-        'hero-gradient': 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #6B8DD6 100%)',
-        'grid-pattern': 'linear-gradient(to right, rgb(226 232 240 / 0.5) 1px, transparent 1px), linear-gradient(to bottom, rgb(226 232 240 / 0.5) 1px, transparent 1px)',
+        'dot-matrix': 'radial-gradient(circle, #ffffff08 1.5px, transparent 1.5px)',
+        'cyber-grid': 'linear-gradient(to right, #ffffff05 1px, transparent 1px), linear-gradient(to bottom, #ffffff05 1px, transparent 1px)',
+        'hero-gradient': 'radial-gradient(circle at top right, rgba(191, 0, 255, 0.15), transparent 40%), radial-gradient(circle at bottom left, rgba(0, 240, 255, 0.1), transparent 40%)',
       },
-      backgroundSize: {
-        'grid': '24px 24px',
-        '400%': '400% 400%',
+      animation: {
+        'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
+        'scanline': 'scanline 10s linear infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'shimmer': 'shimmer 2s linear infinite',
+        'glitch': 'glitch 0.3s ease-in-out infinite',
       },
+      keyframes: {
+        pulseGlow: {
+          '0%, 100%': { opacity: 0.6, transform: 'scale(1)' },
+          '50%': { opacity: 1, transform: 'scale(1.05)' },
+        },
+        scanline: {
+          '0%': { transform: 'translateY(-100%)' },
+          '100%': { transform: 'translateY(100%)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-20px)' },
+        },
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
+        glitch: {
+          '0%': { transform: 'translate(0)' },
+          '20%': { transform: 'translate(-2px, 2px)' },
+          '40%': { transform: 'translate(-2px, -2px)' },
+          '60%': { transform: 'translate(2px, 2px)' },
+          '80%': { transform: 'translate(2px, -2px)' },
+          '100%': { transform: 'translate(0)' },
+        }
+      }
     },
   },
   plugins: [],
