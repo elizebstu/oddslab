@@ -1,9 +1,7 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../db/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { fetchPolymarketActivities, fetchPolymarketPositions } from '../services/polymarketService';
-
-const prisma = new PrismaClient();
 
 export const getActivities = async (req: AuthRequest, res: Response) => {
   try {

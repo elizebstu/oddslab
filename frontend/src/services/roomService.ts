@@ -17,6 +17,26 @@ export interface Address {
   createdAt: string;
 }
 
+export interface Activity {
+  address: string;
+  type: 'buy' | 'sell' | 'redeem';
+  market: string;
+  amount: number;
+  timestamp: string;
+  userName?: string;
+}
+
+export interface Position {
+  market: string;
+  outcome: string;
+  totalValue: number;
+  totalShares: number;
+  avgPrice: number;
+  currentPrice: number;
+  cashPnl: number;
+  percentPnl: number;
+}
+
 export const roomService = {
   createRoom: async (name: string): Promise<Room> => {
     const response = await api.post('/rooms', { name });
@@ -42,44 +62,8 @@ export const roomService = {
     return response.data;
   },
 
-  addAddresses: async (roomId: string, addresses: string[]): Promise<Address[]> => {
-    const response = await api.post(`/addresses/${roomId}/addresses`, { addresses });
-    return response.data;
-  },
-
-  removeAddress: async (roomId: string, addressId: string): Promise<void> => {
-    await api.delete(`/addresses/${roomId}/addresses/${addressId}`);
-  },
-
-  getActivities: async (roomId: string): Promise<Activity[]> => {
-    const response = await api.get(`/rooms/${roomId}/activities`);
-    return response.data;
-  },
-
-  getPositions: async (roomId: string): Promise<Position[]> => {
-    const response = await api.get(`/rooms/${roomId}/positions`);
-    return response.data;
-  },
-
   getPublicRooms: async (): Promise<Room[]> => {
     const response = await api.get('/rooms/public/all');
     return response.data;
   },
 };
-
-export interface Activity {
-  address: string;
-  type: 'buy' | 'sell' | 'redeem';
-  market: string;
-  amount: number;
-  timestamp: string;
-  userName?: string;
-}
-
-export interface Position {
-  market: string;
-  outcome: string;
-  totalValue: number;
-  totalShares: number;
-  avgPrice: number;
-}

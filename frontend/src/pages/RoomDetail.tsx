@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { roomService } from '../services/roomService';
+import { addressService } from '../services/addressService';
+import { activityService } from '../services/activityService';
 import type { Room, Activity, Position } from '../services/roomService';
+import { formatAddress, formatDisplayName, formatTimestamp, getRankBadge } from '../utils/formatting';
 
 type TabType = 'positions' | 'activities';
 
@@ -36,7 +41,7 @@ export default function RoomDetail() {
 
   const loadActivities = async () => {
     try {
-      const data = await roomService.getActivities(id!);
+      const data = await activityService.getActivities(id!);
       setActivities(data);
     } catch (error) {
       console.error('Failed to load activities:', error);
@@ -45,7 +50,7 @@ export default function RoomDetail() {
 
   const loadPositions = async () => {
     try {
-      const data = await roomService.getPositions(id!);
+      const data = await activityService.getPositions(id!);
       setPositions(data);
     } catch (error) {
       console.error('Failed to load positions:', error);
@@ -57,7 +62,7 @@ export default function RoomDetail() {
     setAddError('');
     const addresses = addressInput.split(/[,\n]/).map(a => a.trim()).filter(a => a);
     try {
-      await roomService.addAddresses(id!, addresses);
+      await addressService.addAddresses(id!, addresses);
       setAddressInput('');
       loadRoom();
       loadActivities();
@@ -76,7 +81,7 @@ export default function RoomDetail() {
 
   const handleRemoveAddress = async (addressId: string) => {
     try {
-      await roomService.removeAddress(id!, addressId);
+      await addressService.removeAddress(id!, addressId);
       loadRoom();
       loadActivities();
       loadPositions();
@@ -101,345 +106,347 @@ export default function RoomDetail() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const formatAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
+  if (loading) {
+    return <LoadingSpinner fullScreen text="Loading room..." />;
+  }
 
-  const formatDisplayName = (activity: Activity) => {
-    if (activity.userName) {
-      return activity.userName;
-    }
-    return formatAddress(activity.address);
-  };
-
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
-  };
-
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 text-sm text-gray-500">
-      <div className="flex items-center gap-3">
-        <svg className="animate-spin h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        Loading...
-      </div>
-    </div>
-  );
-  if (!room) return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 text-sm text-gray-500">
-      Room not found
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-black selection:text-white">
-      <nav className="w-full border-b border-gray-200/60 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex justify-between items-center">
+  if (!room) {
+    return (
+      <div className="min-h-screen bg-surface-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-surface-900 mb-2">Room not found</h1>
+          <p className="text-surface-500 mb-6">This room may have been deleted or you don't have access.</p>
           <button
             onClick={() => navigate('/dashboard')}
-            className="text-sm font-medium text-gray-500 hover:text-black transition-colors flex items-center gap-2"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white px-6 py-3 rounded-xl text-sm font-medium hover:from-primary-700 hover:to-primary-600 transition-all"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-surface-50 text-surface-900 font-sans selection:bg-primary-500 selection:text-white">
+      <Navbar />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="text-sm font-medium text-surface-500 hover:text-surface-900 transition-colors flex items-center gap-2 mb-4"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Dashboard
+            Back to Dashboard
           </button>
-          <div className="flex items-center gap-4">
-            <h1 className="text-lg font-bold tracking-tight">{room.name}</h1>
-            {room.isPublic && (
-              <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Public
-              </span>
-            )}
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={handleToggleVisibility}
-              className="text-xs px-4 py-2 border border-gray-200 rounded-full hover:bg-gray-50 transition-colors font-medium"
-            >
-              {room.isPublic ? 'Make Private' : 'Make Public'}
-            </button>
-            {room.isPublic && (
-              <button
-                onClick={copyPublicLink}
-                className="text-xs px-4 py-2 bg-black text-white rounded-full hover:bg-gray-800 transition-colors font-medium flex items-center gap-2"
-              >
-                {copied ? (
-                  <>
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    Copy Link
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        </div>
-      </nav>
-
-      <div className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-3xl border border-gray-200 p-6">
-            <h2 className="text-lg font-bold tracking-tight mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Addresses
-            </h2>
-            <form onSubmit={handleAddAddresses} className="mb-6">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                Add Address or Username
-              </label>
-              <textarea
-                value={addressInput}
-                onChange={(e) => setAddressInput(e.target.value)}
-                placeholder="kch123&#10;0x1234...&#10;@username"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all font-mono text-sm mb-3 resize-none"
-                rows={3}
-              />
-              {addError && (
-                <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl mb-3 flex items-start gap-2">
-                  <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>{addError}</span>
-                </div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">{room.name}</h1>
+              {room.isPublic && (
+                <span className="flex items-center gap-1.5 text-xs font-medium text-accent-700 bg-accent-50 px-2.5 py-1 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-500"></span>
+                  Public
+                </span>
               )}
+            </div>
+            <div className="flex gap-3">
               <button
-                type="submit"
-                className="w-full bg-black text-white px-4 py-3 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                onClick={handleToggleVisibility}
+                className="text-sm px-4 py-2.5 border border-surface-200 rounded-xl hover:bg-surface-100 transition-colors font-medium"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Addresses
+                {room.isPublic ? 'Make Private' : 'Make Public'}
               </button>
-            </form>
-            <div className="space-y-2">
-              {room.addresses?.map((addr) => (
-                <div key={addr.id} className="group flex justify-between items-center p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              {room.isPublic && (
+                <button
+                  onClick={copyPublicLink}
+                  className="text-sm px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-xl hover:from-primary-700 hover:to-primary-600 transition-all font-medium flex items-center gap-2"
+                >
+                  {copied ? (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                    </div>
-                    <span className="text-sm font-mono text-gray-700">{formatAddress(addr.address)}</span>
-                  </div>
-                  <button
-                    onClick={() => handleRemoveAddress(addr.id)}
-                    className="text-gray-400 hover:text-red-600 text-sm transition-colors opacity-0 group-hover:opacity-100 p-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-              {(!room.addresses || room.addresses.length === 0) && (
-                <div className="text-center py-8 text-gray-400 text-sm">
-                  No addresses added yet
-                </div>
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Copy Link
+                    </>
+                  )}
+                </button>
               )}
             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-8">
-          <div className="bg-white rounded-3xl border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex gap-2">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Left Column - Addresses */}
+          <div className="lg:col-span-4">
+            <div className="bg-white rounded-3xl border border-surface-200 p-6 shadow-card">
+              <h2 className="text-lg font-bold tracking-tight mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Addresses
+              </h2>
+              <form onSubmit={handleAddAddresses} className="mb-6">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-surface-500 mb-2">
+                  Add Address or Username
+                </label>
+                <textarea
+                  value={addressInput}
+                  onChange={(e) => setAddressInput(e.target.value)}
+                  placeholder="kch123&#10;0x1234...&#10;@username"
+                  className="w-full px-4 py-3 bg-surface-50 border border-surface-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-300 transition-all font-mono text-sm mb-3 resize-none"
+                  rows={3}
+                />
+                {addError && (
+                  <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl mb-3 flex items-start gap-2">
+                    <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{addError}</span>
+                  </div>
+                )}
                 <button
-                  onClick={() => setActiveTab('positions')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                    activeTab === 'positions'
-                      ? 'bg-black text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-primary-600 to-primary-500 text-white px-4 py-3 rounded-xl text-sm font-medium hover:from-primary-700 hover:to-primary-600 transition-all flex items-center justify-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  Positions
-                  <span className={`text-xs ${
-                    activeTab === 'positions' ? 'text-white/70' : 'text-gray-500'
-                  }`}>
-                    ({positions.length})
+                  Add Addresses
+                </button>
+              </form>
+              <div className="space-y-2">
+                {room.addresses?.map((addr) => (
+                  <div key={addr.id} className="group flex justify-between items-center p-3 bg-surface-50 rounded-xl hover:bg-surface-100 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <span className="text-sm font-mono text-surface-700">{formatAddress(addr.address)}</span>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveAddress(addr.id)}
+                      className="text-surface-400 hover:text-red-600 text-sm transition-colors opacity-0 group-hover:opacity-100 p-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                {(!room.addresses || room.addresses.length === 0) && (
+                  <div className="text-center py-8 text-surface-400 text-sm">
+                    No addresses added yet
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Data */}
+          <div className="lg:col-span-8">
+            <div className="bg-white rounded-3xl border border-surface-200 shadow-card overflow-hidden">
+              {/* Tabs */}
+              <div className="flex border-b border-surface-200">
+                <button
+                  onClick={() => setActiveTab('positions')}
+                  className={`flex-1 px-6 py-4 text-sm font-medium transition-colors relative ${
+                    activeTab === 'positions'
+                      ? 'text-surface-900'
+                      : 'text-surface-500 hover:text-surface-700'
+                  }`}
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Positions ({positions.length})
                   </span>
+                  {activeTab === 'positions' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-600 to-primary-500" />
+                  )}
                 </button>
                 <button
                   onClick={() => setActiveTab('activities')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  className={`flex-1 px-6 py-4 text-sm font-medium transition-colors relative ${
                     activeTab === 'activities'
-                      ? 'bg-black text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'text-surface-900'
+                      : 'text-surface-500 hover:text-surface-700'
                   }`}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                  Activity Feed
-                  <span className={`text-xs ${
-                    activeTab === 'activities' ? 'text-white/70' : 'text-gray-500'
-                  }`}>
-                    ({activities.length})
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                    Activity Feed ({activities.length})
                   </span>
+                  {activeTab === 'activities' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-600 to-primary-500" />
+                  )}
                 </button>
               </div>
-              {activeTab === 'activities' && (
-                <button
-                  onClick={loadActivities}
-                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Refresh
-                </button>
-              )}
-            </div>
 
-            {activeTab === 'positions' ? (
-              positions.length === 0 ? (
-                <div className="py-16 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-500">No positions found</p>
-                  <p className="text-sm text-gray-400 mt-1">Add addresses to see their current positions</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {positions.map((position, idx) => (
-                    <div
-                      key={idx}
-                      className="group p-4 rounded-2xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition-all"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                              idx === 0 ? 'bg-yellow-100 text-yellow-700' :
-                              idx === 1 ? 'bg-gray-200 text-gray-700' :
-                              idx === 2 ? 'bg-orange-100 text-orange-700' :
-                              'bg-gray-100 text-gray-600'
-                            }`}>
-                              #{idx + 1}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {position.totalShares.toLocaleString()} shares
-                            </span>
-                          </div>
-                          <p className="font-medium text-gray-900 mb-1">{position.market}</p>
-                          <p className="text-sm text-gray-500">{position.outcome}</p>
+              <div className="p-6">
+                {/* Positions Tab */}
+                {activeTab === 'positions' && (
+                  <>
+                    {positions.length === 0 ? (
+                      <div className="py-16 text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-surface-100 flex items-center justify-center mx-auto mb-4">
+                          <svg className="w-8 h-8 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-gray-900">
-                            ${position.totalValue.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            @ ${(position.avgPrice * 100).toFixed(1)}¢
-                          </p>
-                        </div>
+                        <p className="text-surface-500">No positions yet</p>
+                        <p className="text-sm text-surface-400 mt-1">Add addresses to see their current positions</p>
                       </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {positions.map((position, idx) => {
+                          const badge = getRankBadge(idx);
+                          return (
+                            <div
+                              key={idx}
+                              className={`p-4 rounded-2xl border transition-all ${
+                                badge ? `${badge.bg} ${badge.border}` : 'border-surface-100 hover:border-surface-200'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    {badge && <span className="text-lg">{badge.emoji}</span>}
+                                    <p className="font-semibold text-surface-900 truncate">{position.market}</p>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                                    <span className="px-2 py-0.5 bg-surface-100 rounded text-surface-600 font-medium">
+                                      {position.outcome}
+                                    </span>
+                                    <span className="text-surface-500">
+                                      {position.totalShares.toLocaleString()} shares
+                                    </span>
+                                    <span className="text-surface-500">
+                                      @ {(position.avgPrice * 100).toFixed(1)}¢ → {(position.currentPrice * 100).toFixed(1)}¢
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-lg font-bold text-surface-900">
+                                    ${position.totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                  </div>
+                                  <div className={`text-sm font-semibold ${position.cashPnl >= 0 ? 'text-success-600' : 'text-red-600'}`}>
+                                    {position.cashPnl >= 0 ? '+' : ''}${position.cashPnl.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                    <span className="text-xs ml-1">
+                                      ({position.percentPnl >= 0 ? '+' : ''}{position.percentPnl.toFixed(1)}%)
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Activity Tab */}
+                {activeTab === 'activities' && (
+                  <>
+                    <div className="flex justify-end mb-4">
+                      <button
+                        onClick={loadActivities}
+                        className="text-xs text-surface-400 hover:text-surface-600 transition-colors flex items-center gap-1"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Refresh
+                      </button>
                     </div>
-                  ))}
-                </div>
-              )
-            ) : (
-              activities.length === 0 ? (
-                <div className="py-16 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-500">No activities found</p>
-                  <p className="text-sm text-gray-400 mt-1">Add addresses to see their trading activity</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {activities.map((activity, idx) => (
-                    <div
-                      key={idx}
-                      className="group p-4 rounded-2xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition-all"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3 flex-1 min-w-0">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            activity.type === 'buy'
-                              ? 'bg-green-100'
-                              : activity.type === 'sell'
-                              ? 'bg-red-100'
-                              : 'bg-gray-100'
-                          }`}>
-                            {activity.type === 'buy' ? (
-                              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
-                              </svg>
-                            ) : activity.type === 'sell' ? (
-                              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5m0 0l-5-5m5 5V6" />
-                              </svg>
-                            ) : (
-                              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                              </svg>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 truncate">{activity.market}</p>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm">
-                              <span className={`text-gray-500 ${activity.userName ? 'font-medium' : 'font-mono text-xs'}`}>{formatDisplayName(activity)}</span>
-                              <span className="text-gray-300">•</span>
-                              <span className={`font-semibold uppercase ${
-                                activity.type === 'buy' ? 'text-green-600' : 'text-red-600'
-                              }`}>
-                                {activity.type}
-                              </span>
-                              <span className="text-gray-300">•</span>
-                              <span className="font-semibold text-gray-900">
-                                ${activity.amount.toLocaleString()}
+                    {activities.length === 0 ? (
+                      <div className="py-16 text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-surface-100 flex items-center justify-center mx-auto mb-4">
+                          <svg className="w-8 h-8 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <p className="text-surface-500">No activities yet</p>
+                        <p className="text-sm text-surface-400 mt-1">Add addresses to see their trading activity</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {activities.map((activity, idx) => (
+                          <div
+                            key={idx}
+                            className="p-4 rounded-2xl border border-surface-100 hover:border-surface-200 transition-all"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                  activity.type === 'buy'
+                                    ? 'bg-success-100'
+                                    : activity.type === 'sell'
+                                    ? 'bg-red-100'
+                                    : 'bg-surface-100'
+                                }`}>
+                                  {activity.type === 'buy' ? (
+                                    <svg className="w-5 h-5 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                                    </svg>
+                                  ) : activity.type === 'sell' ? (
+                                    <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5m0 0l-5-5m5 5V6" />
+                                    </svg>
+                                  ) : (
+                                    <svg className="w-5 h-5 text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-surface-900 truncate">{activity.market}</p>
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm">
+                                    <span className={`${activity.userName ? 'font-medium text-surface-600' : 'font-mono text-xs text-surface-500'}`}>
+                                      {formatDisplayName(activity)}
+                                    </span>
+                                    <span className="text-surface-300">•</span>
+                                    <span className={`font-semibold uppercase ${
+                                      activity.type === 'buy' ? 'text-success-600' : 'text-red-600'
+                                    }`}>
+                                      {activity.type}
+                                    </span>
+                                    <span className="text-surface-300">•</span>
+                                    <span className="font-semibold text-surface-900">
+                                      ${activity.amount.toLocaleString()}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="text-xs text-surface-400 whitespace-nowrap tabular-nums">
+                                {formatTimestamp(activity.timestamp)}
                               </span>
                             </div>
                           </div>
-                        </div>
-                        <span className="text-xs text-gray-400 whitespace-nowrap tabular-nums">
-                          {formatTimestamp(activity.timestamp)}
-                        </span>
+                        ))}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )
-            )}
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

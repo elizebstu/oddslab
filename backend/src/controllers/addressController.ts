@@ -1,10 +1,8 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../db/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { isValidEthereumAddress } from '../utils/validation';
 import { resolveUsernameToAddress, checkIfBot } from '../services/polymarketService';
-
-const prisma = new PrismaClient();
 
 function isUsername(input: string): boolean {
   const trimmed = input.trim();
