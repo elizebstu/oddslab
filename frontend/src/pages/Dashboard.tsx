@@ -66,12 +66,12 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-16 border-l-4 border-neon-cyan pl-6 py-2">
         <div className="space-y-1">
-          <h1 className="text-4xl md:text-5xl font-display font-black uppercase tracking-tighter italic text-white">
+          <h1 className="text-4xl md:text-5xl font-display font-black uppercase tracking-tighter italic text-foreground">
             DASH<span className="text-neon-cyan glow-text-cyan">BOARD</span>
           </h1>
-          <div className="flex items-center gap-4 text-white/30 text-[10px] font-bold uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-4 text-foreground/30 text-[10px] font-bold uppercase tracking-[0.2em]">
             <span>{rooms.length} Active Rooms</span>
-            <span className="w-1 h-1 bg-white/10 rounded-full" />
+            <span className="w-1 h-1 bg-foreground/10 rounded-full" />
             <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-pulse" /> Network Optimal</span>
           </div>
         </div>
@@ -87,16 +87,16 @@ export default function Dashboard() {
 
       {/* Main Grid */}
       {rooms.length === 0 ? (
-        <div className="bg-midnight-900/50 border border-white/10 p-20 text-center relative overflow-hidden group">
-          <div className="w-20 h-20 bg-midnight-800 border border-white/10 flex items-center justify-center mx-auto mb-10 skew-x-[-6deg] group-hover:border-neon-cyan transition-all">
-            <div className="skew-x-[6deg] text-white/20">
+        <div className="bg-card/50 border border-border p-20 text-center relative overflow-hidden group">
+          <div className="w-20 h-20 bg-muted border border-border flex items-center justify-center mx-auto mb-10 skew-x-[-6deg] group-hover:border-neon-cyan transition-all">
+            <div className="skew-x-[6deg] text-foreground/20">
               <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
             </div>
           </div>
-          <h2 className="text-2xl font-black uppercase tracking-tighter mb-4 italic text-white/80">No Rooms Found</h2>
-          <p className="text-white/40 max-w-sm mx-auto mb-10 text-xs font-bold uppercase tracking-widest leading-relaxed">
+          <h2 className="text-2xl font-black uppercase tracking-tighter mb-4 italic text-foreground/80">No Rooms Found</h2>
+          <p className="text-foreground/40 max-w-sm mx-auto mb-10 text-xs font-bold uppercase tracking-widest leading-relaxed">
             Create your first room to track whale movements and prediction market alerts.
           </p>
           <Button onClick={() => setShowModal(true)} variant="cyber" className="px-10">
@@ -117,17 +117,17 @@ export default function Dashboard() {
           {/* Add New Room Card */}
           <button
             onClick={() => setShowModal(true)}
-            className="group flex flex-col items-center justify-center p-8 border border-dashed border-white/10 bg-midnight-950/30 hover:bg-midnight-900 hover:border-neon-cyan/50 transition-all min-h-[260px] skew-x-[-2deg]"
+            className="group flex flex-col items-center justify-center p-8 border border-dashed border-border bg-card/30 hover:bg-card hover:border-neon-cyan/50 transition-all min-h-[260px] skew-x-[-2deg]"
           >
             <div className="skew-x-[2deg] flex flex-col items-center">
-              <div className="w-12 h-12 bg-midnight-900 border border-white/10 flex items-center justify-center mb-6 skew-x-[-6deg] group-hover:border-neon-cyan transition-all">
-                <div className="skew-x-[6deg] text-white/20 group-hover:text-neon-cyan">
+              <div className="w-12 h-12 bg-muted border border-border flex items-center justify-center mb-6 skew-x-[-6deg] group-hover:border-neon-cyan transition-all">
+                <div className="skew-x-[6deg] text-foreground/20 group-hover:text-neon-cyan">
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                   </svg>
                 </div>
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/20 group-hover:text-white transition-colors">Add New Room</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/20 group-hover:text-foreground transition-colors">Add New Room</span>
             </div>
           </button>
         </div>
@@ -160,7 +160,7 @@ export default function Dashboard() {
         }
       >
         <div className="space-y-6">
-          <p className="text-[11px] text-white/40 uppercase tracking-widest font-bold leading-relaxed">
+          <p className="text-[11px] text-foreground/40 uppercase tracking-widest font-bold leading-relaxed">
             Give your room a name to identify it in your dashboard.
           </p>
           <Input

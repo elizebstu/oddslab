@@ -16,10 +16,10 @@ export default function Input({ label, error, className = '', ...props }: InputP
             <div className="relative group">
                 <input
                     className={`
-            w-full bg-midnight-900 border-2 border-white/10 px-4 py-3 rounded-none
-            text-white font-mono text-sm placeholder:text-white/20
+            w-full bg-[var(--card)] border-2 border-white/10 dark:border-white/10 px-4 py-3 rounded-none
+            text-foreground font-mono text-sm placeholder:text-foreground/20
             focus:outline-none focus:border-neon-cyan focus:shadow-neon-cyan
-            transition-all group-hover:border-white/30
+            transition-all group-hover:border-foreground/30
             ${error ? 'border-neon-red shadow-neon-red' : ''}
             ${className}
           `}

@@ -1,6 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../ui/Button';
+import ThemeToggle from '../ui/ThemeToggle';
+
 
 export default function Navbar() {
     const { user, logout } = useAuth();
@@ -45,7 +47,8 @@ export default function Navbar() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-6">
+                        <ThemeToggle />
                         {user ? (
                             <>
                                 <div className="hidden sm:flex flex-col items-end mr-2">

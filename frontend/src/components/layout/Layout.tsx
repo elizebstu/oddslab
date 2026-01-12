@@ -10,7 +10,7 @@ interface LayoutProps {
 
 export default function Layout({ children, showNavbar = true, showFooter = true }: LayoutProps) {
     return (
-        <div className="min-h-screen flex flex-col bg-midnight-950 text-white selection:bg-neon-cyan selection:text-midnight-950 cyber-grid transition-colors">
+        <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-neon-cyan selection:text-midnight-950 transition-colors">
             {/* Background Ambience Orbs */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-purple/5 blur-[120px] rounded-full animate-float" />

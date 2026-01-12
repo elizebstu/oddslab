@@ -23,12 +23,12 @@ export default function Button({
     const baseStyles = 'inline-flex items-center justify-center font-display font-bold tracking-wider uppercase transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none rounded-none skew-x-[-6deg]';
 
     const variants = {
-        primary: 'bg-neon-green text-midnight-950 hover:bg-white hover:shadow-neon-green border-2 border-neon-green',
-        secondary: 'bg-neon-cyan text-midnight-950 hover:bg-white hover:shadow-neon-cyan border-2 border-neon-cyan',
-        cyber: 'bg-midnight-950 text-neon-cyan border-2 border-neon-cyan hover:bg-neon-cyan hover:text-midnight-950 hover:shadow-neon-cyan shadow-[inset_0_0_10px_rgba(0,240,255,0.2)]',
-        outline: 'bg-transparent text-white border-2 border-white/20 hover:border-white hover:bg-white/5',
-        ghost: 'bg-transparent text-white/70 hover:text-white hover:bg-white/5 border-none',
-        danger: 'bg-neon-red text-midnight-950 hover:bg-white hover:shadow-neon-red border-2 border-neon-red',
+        primary: 'bg-neon-green text-midnight-950 hover:bg-black hover:text-white hover:shadow-neon-green border-2 border-neon-green',
+        secondary: 'bg-neon-cyan text-midnight-950 hover:bg-black hover:text-white hover:shadow-neon-cyan border-2 border-neon-cyan',
+        cyber: 'bg-midnight-950 dark:bg-midnight-950 text-neon-cyan border-2 border-neon-cyan hover:bg-neon-cyan hover:text-midnight-950 hover:shadow-neon-cyan shadow-[inset_0_0_10px_rgba(0,240,255,0.2)]',
+        outline: 'bg-transparent text-foreground border-2 border-current/20 hover:border-current hover:bg-current/[0.05]',
+        ghost: 'bg-transparent text-foreground/70 hover:text-foreground hover:bg-current/[0.05] border-none',
+        danger: 'bg-neon-red text-midnight-950 hover:bg-black hover:text-white hover:shadow-neon-red border-2 border-neon-red',
     };
 
     const sizes = {

@@ -65,18 +65,18 @@ export default function Explore() {
           <span className="w-1.5 h-1.5 bg-neon-cyan animate-pulse shadow-neon-cyan" />
           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-neon-cyan skew-x-[6deg]">Public Network</span>
         </div>
-        <h1 className="text-5xl md:text-6xl font-display font-black uppercase tracking-tighter italic text-white flex justify-center gap-3">
+        <h1 className="text-5xl md:text-6xl font-display font-black uppercase tracking-tighter italic text-foreground flex justify-center gap-3">
           EXPLORE <span className="text-neon-cyan glow-text-cyan">ROOMS</span>
         </h1>
-        <p className="text-base text-white/40 font-bold uppercase tracking-tight leading-relaxed">
+        <p className="text-base text-foreground/40 font-bold uppercase tracking-tight leading-relaxed">
           Access shared rooms from across the network. Find the most profitable whale tracking configurations.
         </p>
       </div>
 
       {/* Control Bar */}
-      <div className="flex flex-col lg:flex-row items-center gap-6 mb-16 bg-midnight-900 border border-white/5 p-6 skew-x-[-2deg]">
+      <div className="flex flex-col lg:flex-row items-center gap-6 mb-16 bg-card border border-border p-6 skew-x-[-2deg]">
         <div className="relative flex-1 w-full skew-x-[2deg]">
-          <svg className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -84,7 +84,7 @@ export default function Explore() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search rooms or markets..."
-            className="w-full h-12 pl-14 pr-6 bg-midnight-950 border border-white/5 focus:border-neon-cyan transition-all outline-none text-white font-mono text-sm placeholder:text-white/20"
+            className="w-full h-12 pl-14 pr-6 bg-muted border border-border focus:border-neon-cyan transition-all outline-none text-foreground font-mono text-sm placeholder:text-foreground/20"
           />
         </div>
 
@@ -93,13 +93,13 @@ export default function Explore() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="appearance-none h-12 pl-6 pr-12 bg-midnight-950 border border-white/10 hover:border-white/20 transition-all outline-none text-[10px] font-bold uppercase tracking-widest text-white/50 cursor-pointer min-w-[180px]"
+              className="appearance-none h-12 pl-6 pr-12 bg-muted border border-border hover:border-foreground/20 transition-all outline-none text-[10px] font-bold uppercase tracking-widest text-foreground/50 cursor-pointer min-w-[180px]"
             >
               <option value="recent">Sort: Newest</option>
               <option value="addresses">Sort: Top Addresses</option>
               <option value="name">Sort: A-Z</option>
             </select>
-            <svg className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/20 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
@@ -111,12 +111,12 @@ export default function Explore() {
       </div>
 
       {rooms.length === 0 ? (
-        <div className="py-24 text-center border border-dashed border-white/10">
-          <p className="text-xl font-black text-white/20 uppercase italic tracking-tighter">No public rooms available.</p>
+        <div className="py-24 text-center border border-dashed border-border bg-card/10">
+          <p className="text-xl font-black text-foreground/20 uppercase italic tracking-tighter">No public rooms available.</p>
         </div>
       ) : filteredAndSortedRooms.length === 0 ? (
         <div className="py-24 text-center">
-          <p className="text-lg font-black text-white/20 uppercase tracking-widest mb-8">No matches for "{searchQuery}"</p>
+          <p className="text-lg font-black text-foreground/20 uppercase tracking-widest mb-8">No matches for "{searchQuery}"</p>
           <Button variant="ghost" onClick={() => setSearchQuery('')}>Clear Search</Button>
         </div>
       ) : (
