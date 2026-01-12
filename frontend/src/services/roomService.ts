@@ -64,8 +64,11 @@ export const roomService = {
 
 export interface Activity {
   address: string;
-  type: 'buy' | 'sell' | 'redeem';
+  type: 'buy' | 'sell' | 'redeem' | 'split' | 'merge' | 'reward' | 'conversion' | 'maker_rebate';
   market: string;
   amount: number;
   timestamp: string;
+  outcome?: string;
+  icon?: string;
+  transactionHash?: string;
 }

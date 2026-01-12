@@ -2,25 +2,37 @@ import axios from 'axios';
 
 interface Activity {
   address: string;
-  type: 'buy' | 'sell' | 'redeem';
+  type: 'buy' | 'sell' | 'redeem' | 'split' | 'merge' | 'reward' | 'conversion' | 'maker_rebate';
   market: string;
   amount: number;
   timestamp: string;
+  outcome?: string;
+  icon?: string;
+  transactionHash?: string;
 }
 
-interface PolymarketTrade {
+interface PolymarketActivity {
   proxyWallet: string;
-  side: 'BUY' | 'SELL';
-  asset: string;
-  conditionId: string;
-  size: number;
-  price: number;
   timestamp: number;
+  conditionId: string;
+  type: 'TRADE' | 'SPLIT' | 'MERGE' | 'REDEEM' | 'REWARD' | 'CONVERSION' | 'MAKER_REBATE';
+  size: number;
+  usdcSize: number;
+  transactionHash: string;
+  price: number;
+  asset: string;
+  side?: 'BUY' | 'SELL';
+  outcomeIndex: number;
   title: string;
   slug: string;
+  icon?: string;
+  eventSlug?: string;
   outcome: string;
-  outcomeIndex: number;
-  transactionHash: string;
+  name?: string;
+  pseudonym?: string;
+  bio?: string;
+  profileImage?: string;
+  profileImageOptimized?: string;
 }
 
 const activityCache = new Map<string, { data: Activity[]; timestamp: number }>();
@@ -41,38 +53,56 @@ export const fetchPolymarketActivities = async (addresses: string[]): Promise<Ac
 
     for (const address of addresses) {
       try {
-        // Fetch trades from Polymarket Data API
-        const response = await axios.get<PolymarketTrade[]>(`${POLYMARKET_DATA_API}/trades`, {
+        // Fetch activity from Polymarket Data API
+        const response = await axios.get<PolymarketActivity[]>(`${POLYMARKET_DATA_API}/activity`, {
           params: {
-            address: address.toLowerCase(),
+            user: address.toLowerCase(),
             limit: 100,
           },
           timeout: 10000,
         });
 
         if (response.data && Array.isArray(response.data)) {
-          const trades = response.data;
+          const activities = response.data;
 
-          // Filter trades from last 24 hours
-          const recentTrades = trades.filter((trade) => trade.timestamp >= oneDayAgo);
+          // Filter activities from last 24 hours
+          const recentActivities = activities.filter((activity) => activity.timestamp >= oneDayAgo);
 
-          const activities = recentTrades.map((trade) => {
-            // Determine type
-            const type: 'buy' | 'sell' = trade.side === 'BUY' ? 'buy' : 'sell';
+          const mappedActivities = recentActivities.map((activity) => {
+            // Determine type based on activity type and side
+            let type: Activity['type'];
 
-            // Calculate amount in dollars
-            const amount = trade.size * trade.price;
+            if (activity.type === 'TRADE' && activity.side) {
+              type = activity.side === 'BUY' ? 'buy' : 'sell';
+            } else if (activity.type === 'REDEEM') {
+              type = 'redeem';
+            } else if (activity.type === 'SPLIT') {
+              type = 'split';
+            } else if (activity.type === 'MERGE') {
+              type = 'merge';
+            } else if (activity.type === 'REWARD') {
+              type = 'reward';
+            } else if (activity.type === 'CONVERSION') {
+              type = 'conversion';
+            } else if (activity.type === 'MAKER_REBATE') {
+              type = 'maker_rebate';
+            } else {
+              type = 'buy'; // fallback
+            }
 
             return {
               address,
               type,
-              market: trade.title,
-              amount: Math.round(amount * 100) / 100,
-              timestamp: new Date(trade.timestamp * 1000).toISOString(),
+              market: activity.title,
+              amount: Math.round(activity.usdcSize * 100) / 100, // Use usdcSize directly
+              timestamp: new Date(activity.timestamp * 1000).toISOString(),
+              outcome: activity.outcome,
+              icon: activity.icon,
+              transactionHash: activity.transactionHash,
             } as Activity;
           });
 
-          allActivities.push(...activities);
+          allActivities.push(...mappedActivities);
         }
       } catch (error: any) {
         console.error(`Error fetching activities for address ${address}:`, error.message);

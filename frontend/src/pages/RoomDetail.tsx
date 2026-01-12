@@ -163,9 +163,19 @@ export default function RoomDetail() {
                         <p className="text-xs text-gray-500 mt-1">
                           <span className="font-mono text-gray-400">{activity.address.slice(0, 8)}</span>
                           <span className="mx-2 text-gray-300">•</span>
-                          <span className={`font-semibold uppercase ${activity.type === 'buy' ? 'text-green-600' : 'text-red-600'}`}>{activity.type}</span>
+                          <span className={`font-semibold uppercase ${
+                            activity.type === 'buy' ? 'text-green-600' :
+                            activity.type === 'sell' ? 'text-red-600' :
+                            'text-blue-600'
+                          }`}>{activity.type}</span>
                           <span className="mx-2 text-gray-300">•</span>
                           <span>${activity.amount.toLocaleString()}</span>
+                          {activity.outcome && (
+                            <>
+                              <span className="mx-2 text-gray-300">•</span>
+                              <span className="text-gray-600">{activity.outcome}</span>
+                            </>
+                          )}
                         </p>
                       </div>
                       <span className="text-xs text-gray-400 tabular-nums">
