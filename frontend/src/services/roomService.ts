@@ -15,6 +15,7 @@ export interface Address {
   address: string;
   roomId: string;
   createdAt: string;
+  userName?: string | null;
 }
 
 export interface Activity {
@@ -26,6 +27,13 @@ export interface Activity {
   userName?: string;
 }
 
+export interface PositionHolder {
+  address: string;
+  userName?: string;
+  shares: number;
+  value: number;
+}
+
 export interface Position {
   market: string;
   outcome: string;
@@ -35,6 +43,7 @@ export interface Position {
   currentPrice: number;
   cashPnl: number;
   percentPnl: number;
+  holders?: PositionHolder[];
 }
 
 export const roomService = {

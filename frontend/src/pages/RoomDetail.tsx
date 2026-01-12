@@ -6,7 +6,7 @@ import Card from '../components/ui/Card';
 import { roomService } from '../services/roomService';
 import { addressService } from '../services/addressService';
 import { activityService } from '../services/activityService';
-import type { Room, Activity, Position } from '../services/roomService';
+import type { Room, Activity, Position, Address } from '../services/roomService';
 import { formatAddress, formatDisplayName, formatTimestamp, getRankBadge } from '../utils/formatting';
 
 type TabType = 'positions' | 'activities';
@@ -16,15 +16,18 @@ export default function RoomDetail() {
   const [room, setRoom] = useState<Room | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
   const [addressInput, setAddressInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [addError, setAddError] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('positions');
   const navigate = useNavigate();
 
   useEffect(() => {
     loadRoom();
+    loadAddressProfiles();
     loadPositions();
     loadActivities();
   }, [id]);
@@ -37,6 +40,15 @@ export default function RoomDetail() {
       console.error('Failed to load room:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAddressProfiles = async () => {
+    try {
+      const data = await addressService.getAddressProfiles(id!);
+      setAddresses(data);
+    } catch (error) {
+      console.error('Failed to load address profiles:', error);
     }
   };
 
@@ -61,11 +73,12 @@ export default function RoomDetail() {
   const handleAddAddresses = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddError('');
-    const addresses = addressInput.split(/[,\n]/).map(a => a.trim()).filter(a => a);
+    const addressList = addressInput.split(/[,\n]/).map(a => a.trim()).filter(a => a);
     try {
-      await addressService.addAddresses(id!, addresses);
+      await addressService.addAddresses(id!, addressList);
       setAddressInput('');
       loadRoom();
+      loadAddressProfiles();
       loadActivities();
       loadPositions();
     } catch (error: any) {
@@ -77,6 +90,7 @@ export default function RoomDetail() {
     try {
       await addressService.removeAddress(id!, addressId);
       loadRoom();
+      loadAddressProfiles();
       loadActivities();
       loadPositions();
     } catch (error) {
@@ -98,6 +112,12 @@ export default function RoomDetail() {
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyAddress = (address: string) => {
+    navigator.clipboard.writeText(address);
+    setCopiedAddress(address);
+    setTimeout(() => setCopiedAddress(null), 2000);
   };
 
   if (loading) {
@@ -145,7 +165,7 @@ export default function RoomDetail() {
             )}
           </div>
           <p className="text-sm font-bold text-foreground/40 uppercase tracking-widest leading-none">
-            Tracking {room.addresses?.length || 0} Addresses
+            Tracking {addresses.length || room.addresses?.length || 0} Addresses
           </p>
         </div>
 
@@ -170,7 +190,7 @@ export default function RoomDetail() {
                 <span className="w-2 h-8 bg-neon-cyan" />
                 Addresses
               </h2>
-              <span className="text-[10px] font-mono text-neon-cyan/50">{room.addresses?.length}/50</span>
+              <span className="text-[10px] font-mono text-neon-cyan/50">{addresses.length}/50</span>
             </div>
 
             <form onSubmit={handleAddAddresses} className="space-y-4 mb-10">
@@ -193,23 +213,45 @@ export default function RoomDetail() {
             </form>
 
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-              {room.addresses?.map((addr) => (
+              {addresses.map((addr) => (
                 <div key={addr.id} className="group relative flex justify-between items-center p-4 bg-background border border-border hover:border-foreground/20 transition-all">
-                  <div className="flex items-center gap-4 overflow-hidden">
-                    <div className="w-9 h-9 bg-muted border border-border flex items-center justify-center text-neon-cyan font-mono font-bold text-[10px] skew-x-[-6deg]">
+                  <div className="flex items-center gap-4 overflow-hidden flex-1 min-w-0">
+                    <div className="w-9 h-9 bg-muted border border-border flex items-center justify-center text-neon-cyan font-mono font-bold text-[10px] skew-x-[-6deg] shrink-0">
                       <span className="skew-x-[6deg]">{addr.address.slice(2, 4).toUpperCase()}</span>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-mono font-bold text-foreground truncate">{formatAddress(addr.address)}</p>
-                      <p className="text-[8px] font-bold text-foreground/20 uppercase tracking-[0.2em] mt-1">Monitoring</p>
+                    <div className="min-w-0 flex-1">
+                      {addr.userName ? (
+                        <>
+                          <p className="text-xs font-bold text-foreground truncate">{addr.userName}</p>
+                          <p className="text-[10px] font-mono text-foreground/40 truncate">{formatAddress(addr.address)}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs font-mono font-bold text-foreground truncate">{formatAddress(addr.address)}</p>
+                          <p className="text-[8px] font-bold text-foreground/20 uppercase tracking-[0.2em] mt-1">Monitoring</p>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleRemoveAddress(addr.id)}
-                    className="p-2 text-white/20 hover:text-neon-red transition-all opacity-0 group-hover:opacity-100"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => copyAddress(addr.address)}
+                      className="p-2 text-white/20 hover:text-neon-cyan transition-all opacity-0 group-hover:opacity-100"
+                      title="Copy address"
+                    >
+                      {copiedAddress === addr.address ? (
+                        <svg className="w-4 h-4 text-neon-green" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleRemoveAddress(addr.id)}
+                      className="p-2 text-white/20 hover:text-neon-red transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -250,7 +292,6 @@ export default function RoomDetail() {
                   ) : (
                     positions.map((pos, idx) => {
                       const badge = getRankBadge(idx);
-                      const isGreen = pos.cashPnl >= 0;
                       return (
                         <div key={idx} className="group relative p-8 bg-background border border-border hover:border-neon-green transition-all">
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
@@ -269,21 +310,27 @@ export default function RoomDetail() {
                                 <div className="text-[9px] font-bold text-foreground/30 tracking-widest uppercase">
                                   <span className="text-foreground">{pos.totalShares.toLocaleString()}</span> SHARES
                                 </div>
-                                <div className="text-[9px] font-bold text-foreground/30 tracking-widest uppercase">
-                                  ENTRY: <span className="text-foreground">{(pos.avgPrice * 100).toFixed(1)}¢</span>
-                                </div>
                               </div>
+                              {/* Show holders */}
+                              {pos.holders && pos.holders.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-2 mt-3">
+                                  <span className="text-[9px] font-bold text-foreground/30 uppercase tracking-widest">HELD BY:</span>
+                                  {pos.holders.map((holder, hIdx) => (
+                                    <span
+                                      key={hIdx}
+                                      className="px-2 py-1 text-[9px] font-bold bg-muted border border-border text-neon-cyan truncate max-w-[120px]"
+                                      title={`${holder.userName || formatAddress(holder.address)} - ${holder.shares.toLocaleString()} shares ($${holder.value.toLocaleString()})`}
+                                    >
+                                      {holder.userName || formatAddress(holder.address)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
 
                             <div className="flex items-center md:flex-col md:items-end gap-6 md:gap-2">
                               <div className="text-4xl font-mono font-black text-foreground tracking-tighter">
                                 ${pos.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </div>
-                              <div className={`inline-flex items-center gap-1 px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${isGreen ? 'text-neon-green bg-neon-green/10 border border-neon-green/20' : 'text-neon-red bg-neon-red/10 border border-neon-red/20'
-                                }`}>
-                                {isGreen ? '▲' : '▼'}
-                                ${Math.abs(pos.cashPnl).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                <span className="opacity-50 ml-1">({isGreen ? '+' : ''}{pos.percentPnl.toFixed(1)}%)</span>
                               </div>
                             </div>
                           </div>

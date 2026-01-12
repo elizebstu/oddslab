@@ -11,6 +11,13 @@ export interface Activity {
   transactionHash?: string;
 }
 
+export interface PositionHolder {
+  address: string;
+  userName?: string;
+  shares: number;
+  value: number;
+}
+
 export interface Position {
   market: string;
   outcome: string;
@@ -20,6 +27,7 @@ export interface Position {
   currentPrice: number;
   cashPnl: number;
   percentPnl: number;
+  holders: PositionHolder[];
 }
 
 // Internal types for Polymarket API responses

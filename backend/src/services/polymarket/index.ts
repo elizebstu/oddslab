@@ -5,4 +5,4 @@ export { fetchPolymarketPositions } from './positionService';
 export { fetchPolymarketActivities } from './activityService';
 
 // Re-export types
-export type { Activity, Position } from './types';
+export type { Activity, Position, PositionHolder } from './types';

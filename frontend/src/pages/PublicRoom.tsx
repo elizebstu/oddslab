@@ -4,8 +4,9 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { roomService } from '../services/roomService';
+import { addressService } from '../services/addressService';
 import { activityService } from '../services/activityService';
-import type { Room, Activity, Position } from '../services/roomService';
+import type { Room, Activity, Position, Address } from '../services/roomService';
 import { formatAddress, formatDisplayName, formatTimestamp, getRankBadge } from '../utils/formatting';
 
 type Tab = 'positions' | 'activity';
@@ -15,12 +16,15 @@ export default function PublicRoom() {
   const [room, setRoom] = useState<Room | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('positions');
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     loadRoom();
+    loadAddressProfiles();
     loadActivities();
     loadPositions();
   }, [id]);
@@ -33,6 +37,15 @@ export default function PublicRoom() {
       console.error('Failed to load room:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAddressProfiles = async () => {
+    try {
+      const data = await addressService.getAddressProfiles(id!);
+      setAddresses(data);
+    } catch (error) {
+      console.error('Failed to load address profiles:', error);
     }
   };
 
@@ -52,6 +65,12 @@ export default function PublicRoom() {
     } catch (error) {
       console.error('Failed to load positions:', error);
     }
+  };
+
+  const copyAddress = (address: string) => {
+    navigator.clipboard.writeText(address);
+    setCopiedAddress(address);
+    setTimeout(() => setCopiedAddress(null), 2000);
   };
 
   if (loading) {
@@ -90,7 +109,7 @@ export default function PublicRoom() {
             </div>
             <h1 className="text-5xl font-display font-black uppercase tracking-tighter italic text-white">{room.name}</h1>
             <p className="text-sm font-bold text-white/40 uppercase tracking-widest leading-none">
-              Monitoring {room.addresses?.length || 0} Open Targets
+              Monitoring {addresses.length || room.addresses?.length || 0} Open Targets
             </p>
           </div>
 
@@ -113,17 +132,37 @@ export default function PublicRoom() {
               Stream Sources
             </h2>
             <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-              {room.addresses?.map((addr) => (
-                <div key={addr.id} className="flex items-center gap-4 p-4 bg-midnight-950 border border-white/5">
-                  <div className="w-10 h-10 bg-midnight-800 border border-white/5 flex items-center justify-center text-white/30 font-mono font-black text-xs skew-x-[-12deg]">
+              {addresses.map((addr) => (
+                <div key={addr.id} className="group flex items-center gap-4 p-4 bg-midnight-950 border border-white/5 hover:border-white/10 transition-all">
+                  <div className="w-10 h-10 bg-midnight-800 border border-white/5 flex items-center justify-center text-white/30 font-mono font-black text-xs skew-x-[-12deg] shrink-0">
                     <span className="skew-x-[12deg]">{addr.address.slice(2, 4).toUpperCase()}</span>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-mono font-black text-white/70 truncate">
-                      {formatAddress(addr.address)}
-                    </p>
-                    <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] mt-1">Source: Verified</p>
+                  <div className="min-w-0 flex-1">
+                    {addr.userName ? (
+                      <>
+                        <p className="text-xs font-bold text-white/70 truncate">{addr.userName}</p>
+                        <p className="text-[10px] font-mono text-white/30 truncate">{formatAddress(addr.address)}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs font-mono font-black text-white/70 truncate">
+                          {formatAddress(addr.address)}
+                        </p>
+                        <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] mt-1">Source: Verified</p>
+                      </>
+                    )}
                   </div>
+                  <button
+                    onClick={() => copyAddress(addr.address)}
+                    className="p-2 text-white/20 hover:text-neon-cyan transition-all opacity-0 group-hover:opacity-100"
+                    title="Copy address"
+                  >
+                    {copiedAddress === addr.address ? (
+                      <svg className="w-4 h-4 text-neon-green" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    )}
+                  </button>
                 </div>
               ))}
             </div>
@@ -163,7 +202,6 @@ export default function PublicRoom() {
                   ) : (
                     positions.map((pos, idx) => {
                       const badge = getRankBadge(idx);
-                      const isGreen = pos.cashPnl >= 0;
                       return (
                         <div key={idx} className="group relative p-8 bg-midnight-950 border border-white/5 hover:border-neon-green/50 transition-all">
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
@@ -183,17 +221,26 @@ export default function PublicRoom() {
                                   <span className="text-white">{pos.totalShares.toLocaleString()}</span> SHARES
                                 </div>
                               </div>
+                              {/* Show holders */}
+                              {pos.holders && pos.holders.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-2 mt-3">
+                                  <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">HELD BY:</span>
+                                  {pos.holders.map((holder, hIdx) => (
+                                    <span
+                                      key={hIdx}
+                                      className="px-2 py-1 text-[9px] font-bold bg-midnight-800 border border-white/10 text-neon-cyan truncate max-w-[120px]"
+                                      title={`${holder.userName || formatAddress(holder.address)} - ${holder.shares.toLocaleString()} shares ($${holder.value.toLocaleString()})`}
+                                    >
+                                      {holder.userName || formatAddress(holder.address)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
 
                             <div className="flex items-center md:flex-col md:items-end gap-6 md:gap-2">
                               <div className="text-3xl font-mono font-black text-white tracking-tighter">
                                 ${pos.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </div>
-                              <div className={`inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black uppercase tracking-widest ${isGreen ? 'text-neon-green' : 'text-neon-red'
-                                }`}>
-                                {isGreen ? '▲' : '▼'}
-                                ${Math.abs(pos.cashPnl).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                <span className="opacity-50 ml-1">({isGreen ? '+' : ''}{pos.percentPnl.toFixed(1)}%)</span>
                               </div>
                             </div>
                           </div>

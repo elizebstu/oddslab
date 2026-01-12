@@ -1,14 +1,27 @@
 import axios from 'axios';
 import { CacheMap } from './cache';
 import { POLYMARKET_DATA_API, CACHE_TTL } from './constants';
-import type { Position, PolymarketPosition } from './types';
+import { fetchPolymarketProfile } from './profileService';
+import type { Position, PositionHolder, PolymarketPosition } from './types';
 
 // Cache for aggregated positions
 const positionsCache = new CacheMap<Position[]>(CACHE_TTL);
 
+interface PositionData {
+  market: string;
+  outcome: string;
+  totalValue: number;
+  totalShares: number;
+  avgPrice: number;
+  currentPrice: number;
+  cashPnl: number;
+  percentPnl: number;
+  holders: Map<string, { address: string; userName?: string; shares: number; value: number }>;
+}
+
 /**
  * Fetch positions for addresses
- * Returns aggregated positions by market
+ * Returns aggregated positions by market with holder information
  */
 export const fetchPolymarketPositions = async (
   addresses: string[]
@@ -21,7 +34,19 @@ export const fetchPolymarketPositions = async (
   }
 
   try {
-    const allPositions = new Map<string, Position>();
+    const allPositions = new Map<string, PositionData>();
+
+    // Fetch profiles for all addresses in parallel
+    const profilePromises = addresses.map((addr) => fetchPolymarketProfile(addr));
+    const profiles = await Promise.all(profilePromises);
+    const profileMap = new Map<string, string | undefined>();
+    addresses.forEach((addr, idx) => {
+      const profile = profiles[idx];
+      const displayName = profile?.name || profile?.username;
+      if (displayName) {
+        profileMap.set(addr.toLowerCase(), displayName);
+      }
+    });
 
     for (const address of addresses) {
       try {
@@ -36,6 +61,7 @@ export const fetchPolymarketPositions = async (
           for (const position of response.data) {
             const marketKey = `${position.conditionId}_${position.outcome}`;
             const currentValue = position.currentValue || 0;
+            const userName = profileMap.get(address.toLowerCase());
 
             if (allPositions.has(marketKey)) {
               const existing = allPositions.get(marketKey)!;
@@ -46,7 +72,23 @@ export const fetchPolymarketPositions = async (
               existing.avgPrice = (existing.avgPrice * (existing.totalShares - position.size) + position.avgPrice * position.size) / existing.totalShares;
               existing.currentPrice = position.curPrice;
               existing.percentPnl = (existing.cashPnl / (existing.avgPrice * existing.totalShares)) * 100;
+
+              // Add holder info
+              existing.holders.set(address.toLowerCase(), {
+                address,
+                userName,
+                shares: position.size,
+                value: currentValue,
+              });
             } else {
+              const holders = new Map<string, { address: string; userName?: string; shares: number; value: number }>();
+              holders.set(address.toLowerCase(), {
+                address,
+                userName,
+                shares: position.size,
+                value: currentValue,
+              });
+
               allPositions.set(marketKey, {
                 market: position.title,
                 outcome: position.outcome,
@@ -56,6 +98,7 @@ export const fetchPolymarketPositions = async (
                 currentPrice: position.curPrice,
                 cashPnl: position.cashPnl,
                 percentPnl: position.percentPnl,
+                holders,
               });
             }
           }
@@ -66,7 +109,21 @@ export const fetchPolymarketPositions = async (
       }
     }
 
-    const positionsArray = Array.from(allPositions.values()).sort((a, b) => b.totalValue - a.totalValue);
+    // Convert to final format with holders array
+    const positionsArray: Position[] = Array.from(allPositions.values())
+      .map((pos) => ({
+        market: pos.market,
+        outcome: pos.outcome,
+        totalValue: pos.totalValue,
+        totalShares: pos.totalShares,
+        avgPrice: pos.avgPrice,
+        currentPrice: pos.currentPrice,
+        cashPnl: pos.cashPnl,
+        percentPnl: pos.percentPnl,
+        holders: Array.from(pos.holders.values()) as PositionHolder[],
+      }))
+      .sort((a, b) => b.totalValue - a.totalValue);
+
     positionsCache.set(cacheKey, positionsArray);
     return positionsArray;
   } catch (error) {

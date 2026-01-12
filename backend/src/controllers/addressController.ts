@@ -2,7 +2,7 @@ import { Response } from 'express';
 import prisma from '../db/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { isValidEthereumAddress } from '../utils/validation';
-import { resolveUsernameToAddress, checkIfBot } from '../services/polymarketService';
+import { resolveUsernameToAddress, checkIfBot, fetchPolymarketProfile } from '../services/polymarketService';
 
 function isUsername(input: string): boolean {
   const trimmed = input.trim();
@@ -144,5 +144,38 @@ export const getAddresses = async (req: AuthRequest, res: Response) => {
     res.json(room.addresses);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch addresses' });
+  }
+};
+
+export const getAddressProfiles = async (req: AuthRequest, res: Response) => {
+  try {
+    const { roomId } = req.params;
+
+    const room = await prisma.room.findUnique({
+      where: { id: roomId as string },
+      include: { addresses: true },
+    });
+
+    if (!room) {
+      return res.status(404).json({ error: 'Room not found' });
+    }
+
+    if (!room.isPublic && room.userId !== req.userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Fetch profiles for all addresses in parallel
+    const profilePromises = room.addresses.map(async (addr) => {
+      const profile = await fetchPolymarketProfile(addr.address);
+      return {
+        ...addr,
+        userName: profile?.name || profile?.username || null,
+      };
+    });
+
+    const addressesWithProfiles = await Promise.all(profilePromises);
+    res.json(addressesWithProfiles);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch address profiles' });
   }
 };
