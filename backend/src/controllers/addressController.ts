@@ -2,7 +2,7 @@ import { Response } from 'express';
 import prisma from '../db/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { isValidEthereumAddress } from '../utils/validation';
-import { resolveUsernameToAddress, checkIfBot, fetchPolymarketProfile } from '../services/polymarketService';
+import { resolveUsernameToAddress, checkIfBot, fetchProfilesSequentially } from '../services/polymarketService';
 
 function isUsername(input: string): boolean {
   const trimmed = input.trim();
@@ -164,16 +164,18 @@ export const getAddressProfiles = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Fetch profiles for all addresses in parallel
-    const profilePromises = room.addresses.map(async (addr) => {
-      const profile = await fetchPolymarketProfile(addr.address);
+    // Fetch profiles sequentially to avoid rate limiting
+    const addressList = room.addresses.map(a => a.address);
+    const profileMap = await fetchProfilesSequentially(addressList);
+
+    const addressesWithProfiles = room.addresses.map((addr) => {
+      const profile = profileMap.get(addr.address.toLowerCase());
       return {
         ...addr,
         userName: profile?.name || profile?.username || null,
       };
     });
 
-    const addressesWithProfiles = await Promise.all(profilePromises);
     res.json(addressesWithProfiles);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch address profiles' });

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { CacheMap } from './cache';
 import { POLYMARKET_DATA_API, CACHE_TTL } from './constants';
-import { fetchPolymarketProfile } from './profileService';
+import { fetchProfilesSequentially } from './profileService';
 import type { Activity, PolymarketActivity } from './types';
 
 // Cache for activities
@@ -22,17 +22,15 @@ export const fetchPolymarketActivities = async (addresses: string[]): Promise<Ac
     const allActivities: Activity[] = [];
     const oneDayAgo = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
 
-    // Fetch user profiles for all addresses in parallel
-    const profilePromises = addresses.map((addr) => fetchPolymarketProfile(addr));
-    const profiles = await Promise.all(profilePromises);
+    // Fetch user profiles sequentially to avoid rate limiting
+    const profileResults = await fetchProfilesSequentially(addresses);
     const profileMap = new Map<string, string | undefined>();
-    addresses.forEach((addr, idx) => {
-      const profile = profiles[idx];
+    for (const [addr, profile] of profileResults) {
       const displayName = profile?.name || profile?.username;
       if (displayName) {
         profileMap.set(addr.toLowerCase(), displayName);
       }
-    });
+    }
 
     for (const address of addresses) {
       try {

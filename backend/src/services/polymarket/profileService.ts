@@ -7,6 +7,46 @@ import type { PolymarketProfile, SearchResult } from './types';
 const profileCache = new CacheMap<{ name?: string; username?: string } | null>(CACHE_TTL);
 const usernameCache = new CacheMap<string | null>(CACHE_TTL);
 
+// Rate limiting: delay between API calls (ms)
+const API_DELAY = 200;
+let lastApiCall = 0;
+
+/**
+ * Wait to respect rate limiting
+ */
+const waitForRateLimit = async (): Promise<void> => {
+  const now = Date.now();
+  const timeSinceLastCall = now - lastApiCall;
+  if (timeSinceLastCall < API_DELAY) {
+    await new Promise(resolve => setTimeout(resolve, API_DELAY - timeSinceLastCall));
+  }
+  lastApiCall = Date.now();
+};
+
+/**
+ * Retry a function with exponential backoff
+ */
+const retryWithBackoff = async <T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 500
+): Promise<T> => {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      await waitForRateLimit();
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown error');
+      if (attempt < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError;
+};
+
 /**
  * Resolve a Polymarket username to their wallet address
  * Returns the address if found, null otherwise
@@ -22,14 +62,16 @@ export const resolveUsernameToAddress = async (
   }
 
   try {
-    const response = await axios.get<SearchResult[]>(`${POLYMARKET_GAMMA_API}/search`, {
-      params: {
-        query: cleanUsername,
-        type: 'profile',
-        limit: 5,
-      },
-      timeout: 10000,
-    });
+    const response = await retryWithBackoff(() =>
+      axios.get<SearchResult[]>(`${POLYMARKET_GAMMA_API}/search`, {
+        params: {
+          query: cleanUsername,
+          type: 'profile',
+          limit: 5,
+        },
+        timeout: 15000,
+      })
+    );
 
     const exactMatch = response.data.find((result) => {
       const displayUsername = result.profile?.displayUsernamePublic;
@@ -68,12 +110,14 @@ export const fetchPolymarketProfile = async (
   }
 
   try {
-    const response = await axios.get<PolymarketProfile>(`${POLYMARKET_GAMMA_API}/public-profile`, {
-      params: {
-        address: address.toLowerCase(),
-      },
-      timeout: 10000,
-    });
+    const response = await retryWithBackoff(() =>
+      axios.get<PolymarketProfile>(`${POLYMARKET_GAMMA_API}/public-profile`, {
+        params: {
+          address: address.toLowerCase(),
+        },
+        timeout: 15000,
+      })
+    );
 
     const profile = response.data;
     const result = {
@@ -89,4 +133,20 @@ export const fetchPolymarketProfile = async (
     profileCache.set(address, null);
     return null;
   }
+};
+
+/**
+ * Fetch profiles for multiple addresses sequentially to avoid rate limiting
+ */
+export const fetchProfilesSequentially = async (
+  addresses: string[]
+): Promise<Map<string, { name?: string; username?: string } | null>> => {
+  const results = new Map<string, { name?: string; username?: string } | null>();
+
+  for (const address of addresses) {
+    const profile = await fetchPolymarketProfile(address);
+    results.set(address.toLowerCase(), profile);
+  }
+
+  return results;
 };

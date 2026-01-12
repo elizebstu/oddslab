@@ -5,6 +5,7 @@
 export {
   resolveUsernameToAddress,
   fetchPolymarketProfile,
+  fetchProfilesSequentially,
   checkIfBot,
   fetchPolymarketPositions,
   fetchPolymarketActivities,

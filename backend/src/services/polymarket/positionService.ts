@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { CacheMap } from './cache';
 import { POLYMARKET_DATA_API, CACHE_TTL } from './constants';
-import { fetchPolymarketProfile } from './profileService';
+import { fetchProfilesSequentially } from './profileService';
 import type { Position, PositionHolder, PolymarketPosition } from './types';
 
 // Cache for aggregated positions
@@ -36,17 +36,15 @@ export const fetchPolymarketPositions = async (
   try {
     const allPositions = new Map<string, PositionData>();
 
-    // Fetch profiles for all addresses in parallel
-    const profilePromises = addresses.map((addr) => fetchPolymarketProfile(addr));
-    const profiles = await Promise.all(profilePromises);
+    // Fetch profiles sequentially to avoid rate limiting
+    const profileResults = await fetchProfilesSequentially(addresses);
     const profileMap = new Map<string, string | undefined>();
-    addresses.forEach((addr, idx) => {
-      const profile = profiles[idx];
+    for (const [addr, profile] of profileResults) {
       const displayName = profile?.name || profile?.username;
       if (displayName) {
         profileMap.set(addr.toLowerCase(), displayName);
       }
-    });
+    }
 
     for (const address of addresses) {
       try {
