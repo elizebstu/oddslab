@@ -9,7 +9,7 @@ interface CardProps {
 
 export default function Card({ children, className = '', hover = false, variant = 'default' }: CardProps) {
     const variantStyles = {
-        default: 'border-white/5',
+        default: 'border-border',
         'neon-green': 'border-neon-green/30 shadow-[inset_0_0_15px_rgba(0,255,136,0.05)]',
         'neon-cyan': 'border-neon-cyan/30 shadow-[inset_0_0_15px_rgba(0,240,255,0.05)]',
         'neon-purple': 'border-neon-purple/30 shadow-[inset_0_0_15px_rgba(191,0,255,0.05)]',

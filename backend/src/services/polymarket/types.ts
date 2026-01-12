@@ -1,11 +1,14 @@
 // Exported types for API consumers
 export interface Activity {
   address: string;
-  type: 'buy' | 'sell' | 'redeem';
+  type: 'buy' | 'sell' | 'redeem' | 'split' | 'merge' | 'reward' | 'conversion' | 'maker_rebate';
   market: string;
   amount: number;
   timestamp: string;
   userName?: string;
+  outcome?: string;
+  icon?: string;
+  transactionHash?: string;
 }
 
 export interface Position {
@@ -20,20 +23,29 @@ export interface Position {
 }
 
 // Internal types for Polymarket API responses
-export interface PolymarketTrade {
+export interface PolymarketActivity {
   proxyWallet: string;
-  side: 'BUY' | 'SELL';
-  asset: string;
-  conditionId: string;
-  size: number;
-  price: number;
   timestamp: number;
+  conditionId: string;
+  type: 'TRADE' | 'SPLIT' | 'MERGE' | 'REDEEM' | 'REWARD' | 'CONVERSION' | 'MAKER_REBATE';
+  size: number;
+  usdcSize: number;
+  transactionHash: string;
+  price: number;
+  asset: string;
+  side?: 'BUY' | 'SELL';
+  outcomeIndex: number;
   title: string;
   slug: string;
+  icon?: string;
+  eventSlug?: string;
   outcome: string;
-  outcomeIndex: number;
-  transactionHash: string;
+  name?: string;
+  pseudonym?: string;
 }
+
+// Legacy type alias for backward compatibility
+export type PolymarketTrade = PolymarketActivity;
 
 export interface PolymarketPosition {
   conditionId: string;

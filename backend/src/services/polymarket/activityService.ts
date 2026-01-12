@@ -2,13 +2,13 @@ import axios from 'axios';
 import { CacheMap } from './cache';
 import { POLYMARKET_DATA_API, CACHE_TTL } from './constants';
 import { fetchPolymarketProfile } from './profileService';
-import type { Activity, PolymarketTrade } from './types';
+import type { Activity, PolymarketActivity } from './types';
 
 // Cache for activities
 const activityCache = new CacheMap<Activity[]>(CACHE_TTL);
 
 /**
- * Fetch trading activities for addresses
+ * Fetch trading activities for addresses using Polymarket Data API
  */
 export const fetchPolymarketActivities = async (addresses: string[]): Promise<Activity[]> => {
   const cacheKey = addresses.sort().join(',');
@@ -36,7 +36,8 @@ export const fetchPolymarketActivities = async (addresses: string[]): Promise<Ac
 
     for (const address of addresses) {
       try {
-        const response = await axios.get<PolymarketTrade[]>(`${POLYMARKET_DATA_API}/trades`, {
+        // Use /activity endpoint instead of /trades
+        const response = await axios.get<PolymarketActivity[]>(`${POLYMARKET_DATA_API}/activity`, {
           params: {
             user: address.toLowerCase(),
             limit: 500,
@@ -45,26 +46,47 @@ export const fetchPolymarketActivities = async (addresses: string[]): Promise<Ac
         });
 
         if (response.data && Array.isArray(response.data)) {
-          const trades = response.data;
+          const activities = response.data;
 
-          // Filter trades from last 24 hours
-          const recentTrades = trades.filter((trade) => trade.timestamp >= oneDayAgo);
+          // Filter activities from last 24 hours
+          const recentActivities = activities.filter((activity) => activity.timestamp >= oneDayAgo);
 
-          const activities = recentTrades.map((trade) => {
-            const type: 'buy' | 'sell' = trade.side === 'BUY' ? 'buy' : 'sell';
-            const amount = trade.size * trade.price;
+          const mappedActivities = recentActivities.map((activity) => {
+            // Determine type based on activity type and side
+            let type: Activity['type'];
+
+            if (activity.type === 'TRADE' && activity.side) {
+              type = activity.side === 'BUY' ? 'buy' : 'sell';
+            } else if (activity.type === 'REDEEM') {
+              type = 'redeem';
+            } else if (activity.type === 'SPLIT') {
+              type = 'split';
+            } else if (activity.type === 'MERGE') {
+              type = 'merge';
+            } else if (activity.type === 'REWARD') {
+              type = 'reward';
+            } else if (activity.type === 'CONVERSION') {
+              type = 'conversion';
+            } else if (activity.type === 'MAKER_REBATE') {
+              type = 'maker_rebate';
+            } else {
+              type = 'buy'; // fallback
+            }
 
             return {
               address,
               type,
-              market: trade.title || trade.conditionId,
-              amount: Math.round(amount * 100) / 100,
-              timestamp: new Date(trade.timestamp * 1000).toISOString(),
+              market: activity.title || activity.conditionId,
+              amount: Math.round(activity.usdcSize * 100) / 100, // Use usdcSize directly
+              timestamp: new Date(activity.timestamp * 1000).toISOString(),
               userName: profileMap.get(address.toLowerCase()),
+              outcome: activity.outcome,
+              icon: activity.icon,
+              transactionHash: activity.transactionHash,
             } as Activity;
           });
 
-          allActivities.push(...activities);
+          allActivities.push(...mappedActivities);
         }
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Unknown error';
