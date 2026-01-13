@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTranslate } from '../hooks/useTranslate';
+import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -41,9 +42,25 @@ const saveBlockedAddresses = (roomId: string, blocked: Set<string>) => {
   localStorage.setItem(`blocked_addresses_${roomId}`, JSON.stringify([...blocked]));
 };
 
+// Helper to get joined rooms from localStorage
+const getJoinedRooms = (): Set<string> => {
+  try {
+    const stored = localStorage.getItem('joined_rooms');
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+// Helper to save joined rooms to localStorage
+const saveJoinedRooms = (joined: Set<string>) => {
+  localStorage.setItem('joined_rooms', JSON.stringify([...joined]));
+};
+
 export default function PublicRoom() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [room, setRoom] = useState<Room | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -57,9 +74,13 @@ export default function PublicRoom() {
   const [minVolume, setMinVolume] = useState<string>('');
   const [maxVolume, setMaxVolume] = useState<string>('');
   const [blockedAddresses, setBlockedAddresses] = useState<Set<string>>(new Set());
+  const [hasJoined, setHasJoined] = useState(false);
   const refreshTimerRef = useRef<number | null>(null);
   const walletsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  // Check if current user is the owner
+  const isOwner = user && room && user.id === room.userId;
 
   // Close wallets panel when clicking outside
   useEffect(() => {
@@ -72,12 +93,21 @@ export default function PublicRoom() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Load blocked addresses from localStorage
+  // Load blocked addresses and joined status from localStorage
   useEffect(() => {
     if (id) {
       setBlockedAddresses(getBlockedAddresses(id));
+      setHasJoined(getJoinedRooms().has(id));
     }
   }, [id]);
+
+  const handleJoinRoom = () => {
+    if (!id) return;
+    const joinedRooms = getJoinedRooms();
+    joinedRooms.add(id);
+    saveJoinedRooms(joinedRooms);
+    setHasJoined(true);
+  };
 
   const toggleBlockAddress = (address: string) => {
     if (!id) return;
@@ -346,9 +376,23 @@ export default function PublicRoom() {
               )}
             </div>
 
-            <Button variant="primary" onClick={() => navigate('/register')} className="min-w-[160px] shadow-neon-green">
-              {t('nav.register')}
-            </Button>
+            {/* Join/Owner/Joined Button */}
+            {isOwner ? (
+              <Button variant="ghost" disabled className="min-w-[160px] cursor-not-allowed opacity-60">
+                {t('room_detail.owner')}
+              </Button>
+            ) : hasJoined ? (
+              <Button variant="ghost" disabled className="min-w-[160px] cursor-not-allowed border-neon-green/50 text-neon-green">
+                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+                {t('room_detail.joined')}
+              </Button>
+            ) : (
+              <Button variant="primary" onClick={handleJoinRoom} className="min-w-[160px] shadow-neon-green">
+                {t('room_detail.join')}
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -439,9 +483,15 @@ export default function PublicRoom() {
                       })
                       .map((pos, idx) => {
                       const badge = getRankBadge(idx);
-                      const polymarketUrl = pos.marketSlug
-                        ? `https://polymarket.com/event/${pos.marketSlug}`
-                        : `https://polymarket.com/search?query=${encodeURIComponent(pos.market)}`;
+                      // Try slug first, then conditionId, then search
+                      let polymarketUrl: string;
+                      if (pos.marketSlug) {
+                        polymarketUrl = `https://polymarket.com/event/${pos.marketSlug}`;
+                      } else if (pos.conditionId) {
+                        polymarketUrl = `https://polymarket.com/event?id=${pos.conditionId}`;
+                      } else {
+                        polymarketUrl = `https://polymarket.com/markets?_q=${encodeURIComponent(pos.market)}`;
+                      }
                       return (
                         <div key={idx} className="group relative p-8 bg-midnight-950 border border-white/5 hover:border-neon-green/50 transition-all">
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
@@ -517,7 +567,7 @@ export default function PublicRoom() {
                       .map((act, idx) => {
                       const isBuy = act.type === 'buy';
                       const isSell = act.type === 'sell';
-                      const polymarketUrl = `https://polymarket.com/search?query=${encodeURIComponent(act.market)}`;
+                      const polymarketUrl = `https://polymarket.com/markets?_q=${encodeURIComponent(act.market)}`;
                       const polygonscanUrl = act.transactionHash ? `https://polygonscan.com/tx/${act.transactionHash}` : null;
                       return (
                         <div key={idx} className="relative p-5 bg-midnight-950 border border-white/5 hover:border-white/10 group transition-all">
