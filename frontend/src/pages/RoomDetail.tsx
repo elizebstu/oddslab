@@ -21,6 +21,101 @@ import { formatAddress, formatDisplayName, formatTimestamp, getRankBadge } from 
 type TabType = 'positions' | 'activities';
 const AUTO_REFRESH_INTERVAL = 120000; // 2 minutes
 
+interface ActivityGroup {
+  key: string;
+  activities: Activity[];
+  latestActivity: Activity;
+  totalBuyAmount: number;
+  totalSellAmount: number;
+  buyCount: number;
+  sellCount: number;
+  positionValue: number | null;
+  profitLoss: number | null;
+}
+
+function groupActivities(activities: Activity[], positions: Position[]): ActivityGroup[] {
+  const groupMap = new Map<string, Activity[]>();
+
+  // Group by address + market name (normalized)
+  for (const activity of activities) {
+    // Use market name as the key, normalized to handle any whitespace differences
+    const marketKey = activity.market.trim().toLowerCase();
+    const key = `${activity.address.toLowerCase()}-${marketKey}`;
+    const existing = groupMap.get(key) || [];
+    existing.push(activity);
+    groupMap.set(key, existing);
+  }
+
+  // Build a lookup map for positions: marketName (lowercase) -> Position
+  const positionMap = new Map<string, Position>();
+  for (const pos of positions) {
+    const marketKey = pos.market.trim().toLowerCase();
+    positionMap.set(marketKey, pos);
+  }
+
+  // Convert to ActivityGroup array
+  const groups: ActivityGroup[] = [];
+  for (const [key, acts] of groupMap) {
+    // Sort by timestamp descending (newest first)
+    const sorted = [...acts].sort((a, b) =>
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    let totalBuyAmount = 0;
+    let totalSellAmount = 0;
+    let buyCount = 0;
+    let sellCount = 0;
+
+    for (const act of sorted) {
+      if (act.type === 'buy') {
+        totalBuyAmount += act.amount;
+        buyCount++;
+      } else if (act.type === 'sell') {
+        totalSellAmount += act.amount;
+        sellCount++;
+      }
+    }
+
+    // Find matching position value
+    const address = sorted[0].address.toLowerCase();
+    const marketKey = sorted[0].market.trim().toLowerCase();
+    const position = positionMap.get(marketKey);
+    let positionValue: number | null = null;
+    let profitLoss: number | null = null;
+
+    if (position) {
+      const holder = position.holders?.find(h => h.address.toLowerCase() === address);
+      if (holder) {
+        positionValue = holder.value;
+        profitLoss = positionValue + totalSellAmount - totalBuyAmount;
+      } else {
+        // No position found for this address - might have sold everything
+        profitLoss = totalSellAmount - totalBuyAmount;
+        positionValue = 0;
+      }
+    }
+
+    groups.push({
+      key,
+      activities: sorted,
+      latestActivity: sorted[0],
+      totalBuyAmount,
+      totalSellAmount,
+      buyCount,
+      sellCount,
+      positionValue,
+      profitLoss,
+    });
+  }
+
+  // Sort groups by latest activity timestamp
+  groups.sort((a, b) =>
+    new Date(b.latestActivity.timestamp).getTime() - new Date(a.latestActivity.timestamp).getTime()
+  );
+
+  return groups;
+}
+
 function MarketTitle({ text }: { text: string }) {
   const translated = useTranslate(text);
   return <>{translated}</>;
@@ -43,7 +138,22 @@ export default function RoomDetail() {
   const [activeTab, setActiveTab] = useState<TabType>('positions');
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [minVolume, setMinVolume] = useState<string>('');
+  const [maxVolume, setMaxVolume] = useState<string>('');
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const refreshTimerRef = useRef<number | null>(null);
+
+  const toggleGroupExpanded = (key: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
 
   const loadRoom = async () => {
     try {
@@ -391,6 +501,35 @@ export default function RoomDetail() {
             </div>
 
             <div className="p-8">
+              {/* Filter controls - shared between tabs */}
+              <div className="flex items-center gap-4 mb-6 p-4 bg-muted/50 border border-border">
+                <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">{t('room_detail.filter_amount')}:</span>
+                <input
+                  type="number"
+                  placeholder={t('room_detail.min_amount')}
+                  value={minVolume}
+                  onChange={(e) => setMinVolume(e.target.value)}
+                  className="w-24 px-3 py-1.5 bg-background border border-border text-foreground text-[11px] font-mono placeholder:text-foreground/20 focus:border-neon-cyan outline-none"
+                />
+                <span className="text-foreground/20">-</span>
+                <input
+                  type="number"
+                  placeholder={t('room_detail.max_amount')}
+                  value={maxVolume}
+                  onChange={(e) => setMaxVolume(e.target.value)}
+                  className="w-24 px-3 py-1.5 bg-background border border-border text-foreground text-[11px] font-mono placeholder:text-foreground/20 focus:border-neon-cyan outline-none"
+                />
+                <span className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest">USD</span>
+                {(minVolume || maxVolume) && (
+                  <button
+                    onClick={() => { setMinVolume(''); setMaxVolume(''); }}
+                    className="ml-2 text-[9px] font-bold text-neon-red hover:text-neon-red/80 uppercase tracking-widest transition-all"
+                  >
+                    {t('room_detail.clear_filter', { defaultValue: 'Clear' })}
+                  </button>
+                )}
+              </div>
+
               {activeTab === 'positions' ? (
                 <div className="space-y-6">
                   {positions.length === 0 ? (
@@ -398,8 +537,23 @@ export default function RoomDetail() {
                       <p className="text-xl font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.no_positions')}</p>
                     </div>
                   ) : (
-                    positions.map((pos, idx) => {
+                    positions
+                      .filter((pos) => {
+                        const min = minVolume ? parseFloat(minVolume) : 0;
+                        const max = maxVolume ? parseFloat(maxVolume) : Infinity;
+                        return pos.totalValue >= min && pos.totalValue <= max;
+                      })
+                      .map((pos, idx) => {
                       const badge = getRankBadge(idx);
+                      // Try slug first, then conditionId, then search
+                      let polymarketUrl: string;
+                      if (pos.marketSlug) {
+                        polymarketUrl = `https://polymarket.com/event/${pos.marketSlug}`;
+                      } else if (pos.conditionId) {
+                        polymarketUrl = `https://polymarket.com/event?id=${pos.conditionId}`;
+                      } else {
+                        polymarketUrl = `https://polymarket.com/markets?_q=${encodeURIComponent(pos.market)}`;
+                      }
                       return (
                         <div key={idx} className="group relative p-8 bg-background border border-border hover:border-neon-green transition-all">
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
@@ -409,6 +563,18 @@ export default function RoomDetail() {
                                 <h3 className="text-xl font-black text-foreground group-hover:text-neon-green transition-colors leading-[0.9] uppercase tracking-tighter">
                                   <MarketTitle text={pos.market} />
                                 </h3>
+                                {/* Polymarket link button */}
+                                <a
+                                  href={polymarketUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 text-foreground/20 hover:text-neon-cyan transition-all opacity-0 group-hover:opacity-100"
+                                  title={t('room_detail.view_on_polymarket', { defaultValue: 'View on Polymarket' })}
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                </a>
                               </div>
                               <div className="flex flex-wrap items-center gap-4">
                                 <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-widest ${pos.outcome.toLowerCase() === 'yes' ? 'bg-neon-green text-midnight-950' : 'bg-neon-red text-midnight-950'
@@ -444,8 +610,7 @@ export default function RoomDetail() {
                           </div>
                         </div>
                       );
-                    })
-                  )}
+                    }))}
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -462,44 +627,169 @@ export default function RoomDetail() {
                         <p className="text-xl font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.no_activity')}</p>
                       </div>
                     ) : (
-                      activities.map((act, idx) => {
-                        const isBuy = act.type === 'buy';
-                        const isSell = act.type === 'sell';
-                        return (
-                          <div key={idx} className="relative p-5 bg-background border border-border hover:border-foreground/10 group transition-all">
-                            <div className="flex items-center justify-between gap-4">
-                              <div className="flex items-center gap-6 flex-1 min-w-0">
-                                <div className={`w-10 h-10 flex items-center justify-center shrink-0 border skew-x-[-6deg] ${isBuy ? 'bg-neon-green/5 border-neon-green/30 text-neon-green' : isSell ? 'bg-neon-red/5 border-neon-red/30 text-neon-red' : 'bg-white/5 border-white/10 text-white/40'
-                                  }`}>
-                                  <div className="skew-x-[6deg]">
-                                    {isBuy ? (
-                                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
-                                    ) : isSell ? (
-                                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 13l-5 5m0 0l-5-5m5 5V6" /></svg>
-                                    ) : (
-                                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                    )}
+                      groupActivities(activities, positions).map((group) => {
+                        const isExpanded = expandedGroups.has(group.key);
+                        const hasMultiple = group.activities.length > 1;
+                        const totalCount = group.buyCount + group.sellCount;
+
+                        // Filter based on volume
+                        const min = minVolume ? parseFloat(minVolume) : 0;
+                        const max = maxVolume ? parseFloat(maxVolume) : Infinity;
+                        const groupTotal = group.totalBuyAmount + group.totalSellAmount;
+                        if (groupTotal < min || groupTotal > max) return null;
+
+                        const renderActivityCard = (act: Activity, isLatest: boolean = false, showBorder: boolean = true) => {
+                          const isBuy = act.type === 'buy';
+                          const isSell = act.type === 'sell';
+                          const polymarketUrl = `https://polymarket.com/markets?_q=${encodeURIComponent(act.market)}`;
+                          return (
+                            <div className={`relative p-5 bg-background ${showBorder ? 'border border-border' : ''} hover:border-foreground/10 transition-all`}>
+                              <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-6 flex-1 min-w-0">
+                                  <div className={`w-10 h-10 flex items-center justify-center shrink-0 border skew-x-[-6deg] ${isBuy ? 'bg-neon-green/5 border-neon-green/30 text-neon-green' : isSell ? 'bg-neon-red/5 border-neon-red/30 text-neon-red' : 'bg-white/5 border-white/10 text-white/40'
+                                    }`}>
+                                    <div className="skew-x-[6deg]">
+                                      {isBuy ? (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
+                                      ) : isSell ? (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 13l-5 5m0 0l-5-5m5 5V6" /></svg>
+                                      ) : (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-xs font-black text-foreground mb-1 uppercase tracking-tighter truncate">
+                                        <MarketTitle text={act.market} />
+                                      </p>
+                                      <a href={polymarketUrl} target="_blank" rel="noopener noreferrer" className="p-1 text-foreground/20 hover:text-neon-cyan transition-all opacity-0 group-hover:opacity-100" title={t('room_detail.view_on_polymarket', { defaultValue: 'View on Polymarket' })} onClick={(e) => e.stopPropagation()}>
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                      </a>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-[9px] font-black text-foreground/30 uppercase tracking-[0.2em]">
+                                      <span className="text-foreground/60">{formatDisplayName(act)}</span>
+                                      <span className="text-white/10">•</span>
+                                      <span className={isBuy ? 'text-neon-green' : isSell ? 'text-neon-red' : ''}>
+                                        {isBuy ? t('room_detail.type_buy') : isSell ? t('room_detail.type_sell') : act.type}
+                                      </span>
+                                      {act.outcome && (
+                                        <>
+                                          <span className="text-white/10">•</span>
+                                          <span className="text-neon-cyan">{act.outcome}</span>
+                                        </>
+                                      )}
+                                      <span className="text-white/10">•</span>
+                                      <span className="text-foreground">${act.amount.toLocaleString()}</span>
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="text-xs font-black text-foreground mb-1 uppercase tracking-tighter truncate">
-                                    <MarketTitle text={act.market} />
-                                  </p>
-                                  <div className="flex items-center gap-3 text-[9px] font-black text-foreground/30 uppercase tracking-[0.2em]">
-                                    <span className="text-foreground/60">{formatDisplayName(act)}</span>
-                                    <span className="text-white/10">•</span>
-                                    <span className={isBuy ? 'text-neon-green' : isSell ? 'text-neon-red' : ''}>
-                                      {isBuy ? t('room_detail.type_buy') : isSell ? t('room_detail.type_sell') : act.type}
+                                <div className="flex items-center gap-3">
+                                  {isLatest && hasMultiple && (
+                                    <span className="px-2 py-0.5 text-[8px] font-black bg-neon-cyan/20 text-neon-cyan uppercase tracking-widest">
+                                      {t('room_detail.latest', { defaultValue: '最新' })}
                                     </span>
-                                    <span className="text-white/10">•</span>
-                                    <span className="text-foreground">${act.amount.toLocaleString()}</span>
+                                  )}
+                                  <div className="text-[10px] font-bold text-foreground/20 uppercase tracking-widest">
+                                    {formatTimestamp(act.timestamp, t)}
                                   </div>
                                 </div>
-                              </div>
-                              <div className="text-[10px] font-bold text-foreground/20 uppercase tracking-widest pt-1">
-                                {formatTimestamp(act.timestamp, t)}
                               </div>
                             </div>
+                          );
+                        };
+
+                        const renderSummary = () => (
+                          <div className="flex items-center gap-4 px-5 py-3 bg-muted/50 border-t border-border text-[9px] font-black uppercase tracking-widest">
+                            <span className="text-foreground/40">
+                              {t('room_detail.total_transactions', { count: totalCount, defaultValue: `共 ${totalCount} 笔` })}
+                            </span>
+                            {group.buyCount > 0 && (
+                              <>
+                                <span className="text-white/10">|</span>
+                                <span className="text-neon-green">
+                                  {t('room_detail.buy_summary', {
+                                    amount: group.totalBuyAmount.toLocaleString(),
+                                    count: group.buyCount,
+                                    defaultValue: `买入: $${group.totalBuyAmount.toLocaleString()} (${group.buyCount}次)`
+                                  })}
+                                </span>
+                              </>
+                            )}
+                            {group.sellCount > 0 && (
+                              <>
+                                <span className="text-white/10">|</span>
+                                <span className="text-neon-red">
+                                  {t('room_detail.sell_summary', {
+                                    amount: group.totalSellAmount.toLocaleString(),
+                                    count: group.sellCount,
+                                    defaultValue: `卖出: $${group.totalSellAmount.toLocaleString()} (${group.sellCount}次)`
+                                  })}
+                                </span>
+                              </>
+                            )}
+                            {group.positionValue !== null && (
+                              <>
+                                <span className="text-white/10">|</span>
+                                <span className="text-neon-cyan">
+                                  持仓: ${group.positionValue.toLocaleString()}
+                                </span>
+                              </>
+                            )}
+                            {group.profitLoss !== null && (
+                              <>
+                                <span className="text-white/10">|</span>
+                                <span className={group.profitLoss >= 0 ? 'text-neon-green' : 'text-neon-red'}>
+                                  盈亏: {group.profitLoss >= 0 ? '+' : ''}${group.profitLoss.toLocaleString()}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        );
+
+                        // Single activity - render normally without grouping
+                        if (!hasMultiple) {
+                          return (
+                            <div key={group.key} className="group">
+                              {renderActivityCard(group.latestActivity, false, true)}
+                            </div>
+                          );
+                        }
+
+                        // Multiple activities - render with grouping
+                        return (
+                          <div key={group.key} className="group">
+                            {isExpanded ? (
+                              // Expanded view
+                              <div
+                                onClick={() => toggleGroupExpanded(group.key)}
+                                className="cursor-pointer border border-border hover:border-foreground/20 transition-all"
+                              >
+                                {group.activities.map((act, idx) => (
+                                  <div key={idx} className={idx > 0 ? 'border-t border-border' : ''}>
+                                    {renderActivityCard(act, idx === 0, false)}
+                                  </div>
+                                ))}
+                                {renderSummary()}
+                              </div>
+                            ) : (
+                              // Collapsed view with stacking effect
+                              <div
+                                onClick={() => toggleGroupExpanded(group.key)}
+                                className="cursor-pointer relative"
+                              >
+                                {/* Stacking effect layers */}
+                                <div className="absolute inset-0 bg-background border border-border translate-x-2 translate-y-2 opacity-30" />
+                                {group.activities.length > 2 && (
+                                  <div className="absolute inset-0 bg-background border border-border translate-x-1 translate-y-1 opacity-50" />
+                                )}
+                                {/* Main card */}
+                                <div className="relative bg-background border border-border hover:border-foreground/20 transition-all">
+                                  {renderActivityCard(group.latestActivity, false, false)}
+                                  {renderSummary()}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })
