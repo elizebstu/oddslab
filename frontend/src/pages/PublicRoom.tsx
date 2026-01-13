@@ -79,6 +79,18 @@ export default function PublicRoom() {
     }
   }, [id]);
 
+  const toggleBlockAddress = (address: string) => {
+    if (!id) return;
+    const newBlocked = new Set(blockedAddresses);
+    if (newBlocked.has(address.toLowerCase())) {
+      newBlocked.delete(address.toLowerCase());
+    } else {
+      newBlocked.add(address.toLowerCase());
+    }
+    setBlockedAddresses(newBlocked);
+    saveBlockedAddresses(id, newBlocked);
+  };
+
   const loadRoom = async () => {
     try {
       const data = await roomService.getRoom(id!);
@@ -258,14 +270,16 @@ export default function PublicRoom() {
                 className={`flex items-center gap-2 px-4 py-2.5 border text-[10px] font-black uppercase tracking-widest transition-all ${
                   showWallets
                     ? 'bg-neon-cyan text-midnight-950 border-neon-cyan'
+                    : blockedAddresses.size > 0
+                    ? 'bg-midnight-900 text-neon-orange border-neon-orange/50 hover:border-neon-cyan hover:text-neon-cyan'
                     : 'bg-midnight-900 text-white/60 border-white/10 hover:border-neon-cyan hover:text-neon-cyan'
                 }`}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
-                <span>{t('room_detail.data_sources', { defaultValue: 'Sources' })}</span>
-                <span className="px-1.5 py-0.5 bg-white/10 text-[8px]">{addresses.length}</span>
+                <span>{t('room_detail.data_sources')}</span>
+                <span className="px-1.5 py-0.5 bg-white/10 text-[8px]">{addresses.length - blockedAddresses.size}/{addresses.length}</span>
                 <svg className={`w-3 h-3 transition-transform ${showWallets ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                 </svg>
@@ -274,40 +288,59 @@ export default function PublicRoom() {
               {/* Dropdown Panel */}
               {showWallets && (
                 <div className="absolute right-0 top-full mt-2 w-80 bg-midnight-900 border border-white/10 shadow-2xl z-50 animate-fade-in">
-                  <div className="p-4 border-b border-white/5">
+                  <div className="p-4 border-b border-white/5 flex items-center justify-between">
                     <h3 className="text-xs font-black uppercase tracking-widest text-white/60">
                       {t('room_detail.stream_sources')}
                     </h3>
+                    {blockedAddresses.size > 0 && (
+                      <span className="text-[9px] font-bold text-neon-orange uppercase tracking-widest">
+                        {blockedAddresses.size} {t('room_detail.blocked')}
+                      </span>
+                    )}
                   </div>
                   <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-                    {addresses.map((addr) => (
-                      <div key={addr.id} className="group flex items-center gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-all">
-                        <div className="w-8 h-8 bg-midnight-800 border border-white/5 flex items-center justify-center text-white/30 font-mono font-black text-[9px] skew-x-[-6deg] shrink-0">
-                          <span className="skew-x-[6deg]">{addr.address.slice(2, 4).toUpperCase()}</span>
+                    {addresses.map((addr) => {
+                      const isBlocked = blockedAddresses.has(addr.address.toLowerCase());
+                      return (
+                        <div key={addr.id} className={`group flex items-center gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-all ${isBlocked ? 'opacity-50' : ''}`}>
+                          <div className={`w-8 h-8 bg-midnight-800 border flex items-center justify-center font-mono font-black text-[9px] skew-x-[-6deg] shrink-0 ${isBlocked ? 'border-neon-red/30 text-neon-red/50' : 'border-white/5 text-white/30'}`}>
+                            <span className="skew-x-[6deg]">{addr.address.slice(2, 4).toUpperCase()}</span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            {addr.userName ? (
+                              <>
+                                <p className={`text-[11px] font-bold truncate ${isBlocked ? 'text-white/30 line-through' : 'text-white/70'}`}>{addr.userName}</p>
+                                <p className="text-[9px] font-mono text-white/30 truncate">{formatAddress(addr.address)}</p>
+                              </>
+                            ) : (
+                              <p className={`text-[11px] font-mono font-bold truncate ${isBlocked ? 'text-white/30 line-through' : 'text-white/70'}`}>{formatAddress(addr.address)}</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => copyAddress(addr.address)}
+                            className="p-1.5 text-white/20 hover:text-neon-cyan transition-all"
+                            title={t('room_detail.copy_address')}
+                          >
+                            {copiedAddress === addr.address ? (
+                              <svg className="w-3.5 h-3.5 text-neon-green" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                            ) : (
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => toggleBlockAddress(addr.address)}
+                            className={`p-1.5 transition-all ${isBlocked ? 'text-neon-green hover:text-neon-green' : 'text-white/20 hover:text-neon-red'}`}
+                            title={isBlocked ? t('room_detail.unblock_address') : t('room_detail.block_address')}
+                          >
+                            {isBlocked ? (
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            ) : (
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                            )}
+                          </button>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          {addr.userName ? (
-                            <>
-                              <p className="text-[11px] font-bold text-white/70 truncate">{addr.userName}</p>
-                              <p className="text-[9px] font-mono text-white/30 truncate">{formatAddress(addr.address)}</p>
-                            </>
-                          ) : (
-                            <p className="text-[11px] font-mono font-bold text-white/70 truncate">{formatAddress(addr.address)}</p>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => copyAddress(addr.address)}
-                          className="p-1.5 text-white/20 hover:text-neon-cyan transition-all"
-                          title="Copy address"
-                        >
-                          {copiedAddress === addr.address ? (
-                            <svg className="w-3.5 h-3.5 text-neon-green" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                          ) : (
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                          )}
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -357,6 +390,35 @@ export default function PublicRoom() {
             </div>
 
             <div className="p-8 min-h-[400px]">
+              {/* Filter controls - shared between tabs */}
+              <div className="flex items-center gap-4 mb-6 p-4 bg-midnight-950/50 border border-white/5">
+                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{t('room_detail.filter_amount')}:</span>
+                <input
+                  type="number"
+                  placeholder={t('room_detail.min_amount')}
+                  value={minVolume}
+                  onChange={(e) => setMinVolume(e.target.value)}
+                  className="w-24 px-3 py-1.5 bg-midnight-800 border border-white/10 text-white text-[11px] font-mono placeholder:text-white/20 focus:border-neon-cyan outline-none"
+                />
+                <span className="text-white/20">-</span>
+                <input
+                  type="number"
+                  placeholder={t('room_detail.max_amount')}
+                  value={maxVolume}
+                  onChange={(e) => setMaxVolume(e.target.value)}
+                  className="w-24 px-3 py-1.5 bg-midnight-800 border border-white/10 text-white text-[11px] font-mono placeholder:text-white/20 focus:border-neon-cyan outline-none"
+                />
+                <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">USD</span>
+                {(minVolume || maxVolume) && (
+                  <button
+                    onClick={() => { setMinVolume(''); setMaxVolume(''); }}
+                    className="ml-2 text-[9px] font-bold text-neon-red hover:text-neon-red/80 uppercase tracking-widest transition-all"
+                  >
+                    {t('room_detail.clear_filter', { defaultValue: '清除' })}
+                  </button>
+                )}
+              </div>
+
               {activeTab === 'positions' ? (
                 <div className="space-y-6">
                   {positions.length === 0 ? (
@@ -364,9 +426,22 @@ export default function PublicRoom() {
                       <p className="text-lg font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.zero_stakes')}</p>
                     </div>
                   ) : (
-                    positions.map((pos, idx) => {
+                    positions
+                      .map((pos) => ({
+                        ...pos,
+                        holders: pos.holders?.filter(h => !blockedAddresses.has(h.address.toLowerCase()))
+                      }))
+                      .filter((pos) => pos.holders && pos.holders.length > 0)
+                      .filter((pos) => {
+                        const min = minVolume ? parseFloat(minVolume) : 0;
+                        const max = maxVolume ? parseFloat(maxVolume) : Infinity;
+                        return pos.totalValue >= min && pos.totalValue <= max;
+                      })
+                      .map((pos, idx) => {
                       const badge = getRankBadge(idx);
-                      const polymarketUrl = `https://polymarket.com/search?query=${encodeURIComponent(pos.market)}`;
+                      const polymarketUrl = pos.marketSlug
+                        ? `https://polymarket.com/event/${pos.marketSlug}`
+                        : `https://polymarket.com/search?query=${encodeURIComponent(pos.market)}`;
                       return (
                         <div key={idx} className="group relative p-8 bg-midnight-950 border border-white/5 hover:border-neon-green/50 transition-all">
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
@@ -427,27 +502,6 @@ export default function PublicRoom() {
                 </div>
               ) : (
                 <div className="space-y-6 font-mono">
-                  {/* Filter controls */}
-                  <div className="flex items-center gap-4 mb-4 p-4 bg-midnight-950/50 border border-white/5">
-                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{t('room_detail.filter_amount', { defaultValue: 'Filter Amount' })}:</span>
-                    <input
-                      type="number"
-                      placeholder={t('room_detail.min_amount', { defaultValue: 'Min' })}
-                      value={minVolume}
-                      onChange={(e) => setMinVolume(e.target.value)}
-                      className="w-24 px-3 py-1.5 bg-midnight-800 border border-white/10 text-white text-[11px] font-mono placeholder:text-white/20 focus:border-neon-cyan outline-none"
-                    />
-                    <span className="text-white/20">-</span>
-                    <input
-                      type="number"
-                      placeholder={t('room_detail.max_amount', { defaultValue: 'Max' })}
-                      value={maxVolume}
-                      onChange={(e) => setMaxVolume(e.target.value)}
-                      className="w-24 px-3 py-1.5 bg-midnight-800 border border-white/10 text-white text-[11px] font-mono placeholder:text-white/20 focus:border-neon-cyan outline-none"
-                    />
-                    <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">USD</span>
-                  </div>
-
                   {activities.length === 0 ? (
                     <div className="py-24 text-center">
                       <p className="text-lg font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.stream_static')}</p>
