@@ -38,8 +38,21 @@ export default function PublicRoom() {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showWallets, setShowWallets] = useState(false);
   const refreshTimerRef = useRef<number | null>(null);
+  const walletsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  // Close wallets panel when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (walletsRef.current && !walletsRef.current.contains(event.target as Node)) {
+        setShowWallets(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const loadRoom = async () => {
     try {
@@ -187,8 +200,8 @@ export default function PublicRoom() {
           </div>
           <h1 className="text-2xl font-black uppercase tracking-tighter mb-4 italic">{t('room_detail.locked_title')}</h1>
           <p className="text-white/40 mb-8 text-xs font-bold uppercase tracking-widest leading-relaxed">{t('room_detail.locked_desc')}</p>
-          <Button onClick={() => navigate('/explore')} variant="primary" className="w-full">
-            {t('room_detail.grid_archive')}
+          <Button onClick={() => navigate('/register')} variant="primary" className="w-full shadow-neon-green">
+            {t('common.join', { defaultValue: 'Join' })}
           </Button>
         </Card>
       </div>
@@ -213,9 +226,68 @@ export default function PublicRoom() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate('/explore')} className="min-w-[160px]">
-              {t('room_detail.grid_archive')}
-            </Button>
+            {/* Collapsible Wallet Sources Button */}
+            <div className="relative" ref={walletsRef}>
+              <button
+                onClick={() => setShowWallets(!showWallets)}
+                className={`flex items-center gap-2 px-4 py-2.5 border text-[10px] font-black uppercase tracking-widest transition-all ${
+                  showWallets
+                    ? 'bg-neon-cyan text-midnight-950 border-neon-cyan'
+                    : 'bg-midnight-900 text-white/60 border-white/10 hover:border-neon-cyan hover:text-neon-cyan'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span>{t('room_detail.data_sources', { defaultValue: 'Sources' })}</span>
+                <span className="px-1.5 py-0.5 bg-white/10 text-[8px]">{addresses.length}</span>
+                <svg className={`w-3 h-3 transition-transform ${showWallets ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Dropdown Panel */}
+              {showWallets && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-midnight-900 border border-white/10 shadow-2xl z-50 animate-fade-in">
+                  <div className="p-4 border-b border-white/5">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-white/60">
+                      {t('room_detail.stream_sources')}
+                    </h3>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                    {addresses.map((addr) => (
+                      <div key={addr.id} className="group flex items-center gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-all">
+                        <div className="w-8 h-8 bg-midnight-800 border border-white/5 flex items-center justify-center text-white/30 font-mono font-black text-[9px] skew-x-[-6deg] shrink-0">
+                          <span className="skew-x-[6deg]">{addr.address.slice(2, 4).toUpperCase()}</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          {addr.userName ? (
+                            <>
+                              <p className="text-[11px] font-bold text-white/70 truncate">{addr.userName}</p>
+                              <p className="text-[9px] font-mono text-white/30 truncate">{formatAddress(addr.address)}</p>
+                            </>
+                          ) : (
+                            <p className="text-[11px] font-mono font-bold text-white/70 truncate">{formatAddress(addr.address)}</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => copyAddress(addr.address)}
+                          className="p-1.5 text-white/20 hover:text-neon-cyan transition-all"
+                          title="Copy address"
+                        >
+                          {copiedAddress === addr.address ? (
+                            <svg className="w-3.5 h-3.5 text-neon-green" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                          ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <Button variant="primary" onClick={() => navigate('/register')} className="min-w-[160px] shadow-neon-green">
               {t('nav.register')}
             </Button>
@@ -223,53 +295,8 @@ export default function PublicRoom() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div className="lg:col-span-4 lg:sticky lg:top-24">
-          <Card className="p-8 border-2 border-white/5 bg-midnight-900/80">
-            <h2 className="text-xl font-black uppercase tracking-tighter mb-8 italic flex items-center gap-3">
-              <span className="w-2 h-8 bg-white/20" />
-              {t('room_detail.stream_sources')}
-            </h2>
-            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-              {addresses.map((addr) => (
-                <div key={addr.id} className="group flex items-center gap-4 p-4 bg-midnight-950 border border-white/5 hover:border-white/10 transition-all">
-                  <div className="w-10 h-10 bg-midnight-800 border border-white/5 flex items-center justify-center text-white/30 font-mono font-black text-xs skew-x-[-12deg] shrink-0">
-                    <span className="skew-x-[12deg]">{addr.address.slice(2, 4).toUpperCase()}</span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    {addr.userName ? (
-                      <>
-                        <p className="text-xs font-bold text-white/70 truncate">{addr.userName}</p>
-                        <p className="text-[10px] font-mono text-white/30 truncate">{formatAddress(addr.address)}</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-xs font-mono font-black text-white/70 truncate">
-                          {formatAddress(addr.address)}
-                        </p>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] mt-1">{t('room_detail.source_verified')}</p>
-                      </>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => copyAddress(addr.address)}
-                    className="p-2 text-white/20 hover:text-neon-cyan transition-all opacity-0 group-hover:opacity-100"
-                    title="Copy address"
-                  >
-                    {copiedAddress === addr.address ? (
-                      <svg className="w-4 h-4 text-neon-green" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                    )}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-8">
-          <Card className="border-2 border-white/5 bg-midnight-900/80 overflow-hidden">
+      <div className="w-full">
+        <Card className="border-2 border-white/5 bg-midnight-900/80 overflow-hidden">
             {/* Auto-refresh status bar */}
             <div className="flex items-center justify-between px-8 py-4 bg-midnight-950/50 border-b border-white/5">
               <div className="flex items-center gap-3">

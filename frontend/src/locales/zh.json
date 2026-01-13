@@ -3,9 +3,10 @@
         "explore": "探索",
         "dashboard": "控制台",
         "login": "登录",
-        "register": "注册",
+        "register": "加入",
         "logout": "退出",
-        "account": "账户"
+        "account": "账户",
+        "feed": "看板"
     },
     "hero": {
         "badge": "公共网络",
@@ -57,6 +58,10 @@
     "dashboard": {
         "title": "控制",
         "title_highlight": "台",
+        "tabs": {
+            "rooms": "监控方案",
+            "feed": "看板"
+        },
         "stats_active": "活跃房间",
         "stats_optimal": "网络处于最佳状态",
         "create_button": "创建新房间",
@@ -134,7 +139,8 @@
         "monitoring_targets_public": "正在监控 {{count}} 个开放目标",
         "locked_title": "频道已锁定",
         "locked_desc": "该数据流为私有或已中断。加入网络以获取完整访问权限。",
-        "grid_archive": "网格存档",
+        "grid_archive": "返回探索",
+        "join": "加入",
         "type_buy": "买入",
         "type_sell": "卖出",
         "not_found_error": {

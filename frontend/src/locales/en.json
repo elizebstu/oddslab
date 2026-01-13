@@ -3,9 +3,10 @@
         "explore": "Explore",
         "dashboard": "Dashboard",
         "login": "Login",
-        "register": "Register",
+        "register": "Join",
         "logout": "Logout",
-        "account": "Account"
+        "account": "Account",
+        "feed": "Feed"
     },
     "hero": {
         "badge": "Public Network",
@@ -57,6 +58,10 @@
     "dashboard": {
         "title": "DASH",
         "title_highlight": "BOARD",
+        "tabs": {
+            "rooms": "Rooms",
+            "feed": "Activity Board"
+        },
         "stats_active": "Active Rooms",
         "stats_optimal": "Network Optimal",
         "create_button": "Create New Room",
@@ -87,7 +92,8 @@
         "monitoring_targets_public": "Monitoring {{count}} Open Targets",
         "locked_title": "Channel Locked",
         "locked_desc": "This data stream is either private or has been severed. Join the network for full access.",
-        "grid_archive": "Grid Archive",
+        "grid_archive": "Back to Explore",
+        "join": "Join",
         "sort_recent": "Sort: Newest",
         "sort_addresses": "Sort: Top Addresses",
         "sort_name": "Sort: A-Z",
