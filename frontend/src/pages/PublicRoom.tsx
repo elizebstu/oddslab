@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTranslate } from '../hooks/useTranslate';
@@ -14,6 +14,7 @@ import {
   type Activity,
   type Position
 } from '../services/polymarketDirect';
+import { getRoomCache, setRoomCache } from '../services/roomCacheService';
 import type { Room, Address } from '../services/roomService';
 import { formatAddress, formatDisplayName, formatTimestamp, getRankBadge } from '../utils/formatting';
 
@@ -23,6 +24,7 @@ function MarketTitle({ text }: { text: string }) {
 }
 
 type Tab = 'positions' | 'activity';
+const AUTO_REFRESH_INTERVAL = 120000; // 2 minutes
 
 export default function PublicRoom() {
   const { id } = useParams<{ id: string }>();
@@ -34,14 +36,10 @@ export default function PublicRoom() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('positions');
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshTimerRef = useRef<number | null>(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    loadRoom();
-    loadAddressProfiles();
-    loadActivities();
-    loadPositions();
-  }, [id]);
 
   const loadRoom = async () => {
     try {
@@ -54,7 +52,7 @@ export default function PublicRoom() {
     }
   };
 
-  const loadAddressProfiles = async () => {
+  const loadAddressProfiles = async (): Promise<Address[]> => {
     try {
       // First get addresses from our backend
       const data = await addressService.getAddresses(id!);
@@ -70,40 +68,103 @@ export default function PublicRoom() {
       }));
 
       setAddresses(addressesWithProfiles);
+      return addressesWithProfiles;
     } catch (error) {
       console.error('Failed to load address profiles:', error);
+      return [];
     }
   };
 
-  const loadActivities = async () => {
+  const loadActivities = async (addressList?: string[]): Promise<Activity[]> => {
     try {
       // Get addresses first
-      const addressList = addresses.length > 0
+      const addrs = addressList || (addresses.length > 0
         ? addresses.map(a => a.address)
-        : (await addressService.getAddresses(id!)).map((a: Address) => a.address);
+        : (await addressService.getAddresses(id!)).map((a: Address) => a.address));
 
       // Fetch activities directly from Polymarket
-      const data = await fetchActivitiesFromPolymarket(addressList);
+      const data = await fetchActivitiesFromPolymarket(addrs);
       setActivities(data);
+      return data;
     } catch (error) {
       console.error('Failed to load activities:', error);
+      return [];
     }
   };
 
-  const loadPositions = async () => {
+  const loadPositions = async (addressList?: string[]): Promise<Position[]> => {
     try {
       // Get addresses first
-      const addressList = addresses.length > 0
+      const addrs = addressList || (addresses.length > 0
         ? addresses.map(a => a.address)
-        : (await addressService.getAddresses(id!)).map((a: Address) => a.address);
+        : (await addressService.getAddresses(id!)).map((a: Address) => a.address));
 
       // Fetch positions directly from Polymarket
-      const data = await fetchPositionsFromPolymarket(addressList);
+      const data = await fetchPositionsFromPolymarket(addrs);
       setPositions(data);
+      return data;
     } catch (error) {
       console.error('Failed to load positions:', error);
+      return [];
     }
   };
+
+  const refreshData = useCallback(async () => {
+    if (!id) return;
+    setIsRefreshing(true);
+    try {
+      // Load addresses first
+      const loadedAddresses = await loadAddressProfiles();
+      const addressList = loadedAddresses.map(a => a.address);
+
+      // Load positions and activities in parallel
+      const [loadedPositions, loadedActivities] = await Promise.all([
+        loadPositions(addressList),
+        loadActivities(addressList),
+      ]);
+
+      // Save to cache
+      setRoomCache(id, loadedAddresses, loadedActivities, loadedPositions);
+      setLastRefresh(new Date());
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [id]);
+
+  // Initial load with cache
+  useEffect(() => {
+    if (!id) return;
+
+    // First, try to load from cache for immediate display
+    const cached = getRoomCache(id);
+    if (cached) {
+      setAddresses(cached.addresses);
+      setActivities(cached.activities);
+      setPositions(cached.positions);
+      setLastRefresh(new Date(cached.lastUpdated));
+    }
+
+    // Load room info
+    loadRoom();
+
+    // Always refresh data in background
+    refreshData();
+  }, [id]);
+
+  // Auto-refresh every 2 minutes
+  useEffect(() => {
+    if (!id) return;
+
+    refreshTimerRef.current = window.setInterval(() => {
+      refreshData();
+    }, AUTO_REFRESH_INTERVAL);
+
+    return () => {
+      if (refreshTimerRef.current) {
+        clearInterval(refreshTimerRef.current);
+      }
+    };
+  }, [id, refreshData]);
 
   const copyAddress = (address: string) => {
     navigator.clipboard.writeText(address);
@@ -209,6 +270,19 @@ export default function PublicRoom() {
 
         <div className="lg:col-span-8">
           <Card className="border-2 border-white/5 bg-midnight-900/80 overflow-hidden">
+            {/* Auto-refresh status bar */}
+            <div className="flex items-center justify-between px-8 py-4 bg-midnight-950/50 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-neon-cyan animate-pulse' : 'bg-neon-green'}`} />
+                <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">
+                  {isRefreshing ? t('room_detail.refreshing') : t('room_detail.auto_refresh_active')}
+                </span>
+              </div>
+              <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
+                {t('room_detail.last_updated', { time: formatTimestamp(lastRefresh.toISOString(), t) })}
+              </span>
+            </div>
+
             <div className="grid grid-cols-2 bg-midnight-950 p-2 border-b border-white/5">
               <button
                 onClick={() => setActiveTab('positions')}

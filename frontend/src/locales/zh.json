@@ -110,6 +110,7 @@
         "last_updated": "最后更新: {{time}}",
         "monitoring": "监控中",
         "auto_refresh": "自动刷新:",
+        "auto_refresh_active": "每2分钟自动刷新",
         "refreshing": "正在刷新...",
         "refresh_now": "立即刷新",
         "live_monitoring": "实时活动监控",

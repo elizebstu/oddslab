@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTranslate } from '../hooks/useTranslate';
@@ -14,11 +14,12 @@ import {
   type Activity,
   type Position
 } from '../services/polymarketDirect';
+import { getRoomCache, setRoomCache } from '../services/roomCacheService';
 import type { Room, Address } from '../services/roomService';
 import { formatAddress, formatDisplayName, formatTimestamp, getRankBadge } from '../utils/formatting';
 
 type TabType = 'positions' | 'activities';
-type RefreshInterval = 0 | 60000 | 300000 | 3600000; // 0 = off, 1min, 5min, 1hour
+const AUTO_REFRESH_INTERVAL = 120000; // 2 minutes
 
 function MarketTitle({ text }: { text: string }) {
   const translated = useTranslate(text);
@@ -30,12 +31,6 @@ export default function RoomDetail() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const REFRESH_OPTIONS: { value: RefreshInterval; label: string }[] = [
-    { value: 0, label: t('common.refresh.off') },
-    { value: 60000, label: t('common.refresh.1min') },
-    { value: 300000, label: t('common.refresh.5min') },
-    { value: 3600000, label: t('common.refresh.1hour') },
-  ];
   const [room, setRoom] = useState<Room | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -46,9 +41,9 @@ export default function RoomDetail() {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [addError, setAddError] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('positions');
-  const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(0);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshTimerRef = useRef<number | null>(null);
 
   const loadRoom = async () => {
     try {
@@ -61,7 +56,7 @@ export default function RoomDetail() {
     }
   };
 
-  const loadAddressProfiles = async () => {
+  const loadAddressProfiles = async (): Promise<Address[]> => {
     try {
       // First get addresses from our backend
       const data = await addressService.getAddresses(id!);
@@ -77,70 +72,103 @@ export default function RoomDetail() {
       }));
 
       setAddresses(addressesWithProfiles);
+      return addressesWithProfiles;
     } catch (error) {
       console.error('Failed to load address profiles:', error);
+      return [];
     }
   };
 
-  const loadActivities = async () => {
+  const loadActivities = async (addressList?: string[]): Promise<Activity[]> => {
     try {
       // Get addresses first
-      const addressList = addresses.length > 0
+      const addrs = addressList || (addresses.length > 0
         ? addresses.map(a => a.address)
-        : (await addressService.getAddresses(id!)).map((a: Address) => a.address);
+        : (await addressService.getAddresses(id!)).map((a: Address) => a.address));
 
       // Fetch activities directly from Polymarket
-      const data = await fetchActivitiesFromPolymarket(addressList);
+      const data = await fetchActivitiesFromPolymarket(addrs);
       setActivities(data);
+      return data;
     } catch (error) {
       console.error('Failed to load activities:', error);
+      return [];
     }
   };
 
-  const loadPositions = async () => {
+  const loadPositions = async (addressList?: string[]): Promise<Position[]> => {
     try {
       // Get addresses first
-      const addressList = addresses.length > 0
+      const addrs = addressList || (addresses.length > 0
         ? addresses.map(a => a.address)
-        : (await addressService.getAddresses(id!)).map((a: Address) => a.address);
+        : (await addressService.getAddresses(id!)).map((a: Address) => a.address));
 
       // Fetch positions directly from Polymarket
-      const data = await fetchPositionsFromPolymarket(addressList);
+      const data = await fetchPositionsFromPolymarket(addrs);
       setPositions(data);
+      return data;
     } catch (error) {
       console.error('Failed to load positions:', error);
+      return [];
     }
   };
 
   const refreshData = useCallback(async () => {
+    if (!id) return;
     setIsRefreshing(true);
-    await Promise.all([
-      loadAddressProfiles(),
-      loadPositions(),
-      loadActivities(),
-    ]);
-    setLastRefresh(new Date());
-    setIsRefreshing(false);
+    try {
+      // Load addresses first
+      const loadedAddresses = await loadAddressProfiles();
+      const addressList = loadedAddresses.map(a => a.address);
+
+      // Load positions and activities in parallel
+      const [loadedPositions, loadedActivities] = await Promise.all([
+        loadPositions(addressList),
+        loadActivities(addressList),
+      ]);
+
+      // Save to cache
+      setRoomCache(id, loadedAddresses, loadedActivities, loadedPositions);
+      setLastRefresh(new Date());
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [id]);
 
-  // Initial load
+  // Initial load with cache
   useEffect(() => {
+    if (!id) return;
+
+    // First, try to load from cache for immediate display
+    const cached = getRoomCache(id);
+    if (cached) {
+      setAddresses(cached.addresses);
+      setActivities(cached.activities);
+      setPositions(cached.positions);
+      setLastRefresh(new Date(cached.lastUpdated));
+    }
+
+    // Load room info
     loadRoom();
-    loadAddressProfiles();
-    loadPositions();
-    loadActivities();
+
+    // Always refresh data in background
+    refreshData();
   }, [id]);
 
-  // Auto-refresh effect
+  // Auto-refresh every 2 minutes
   useEffect(() => {
-    if (refreshInterval === 0) return;
+    if (!id) return;
 
-    const intervalId = setInterval(() => {
+    refreshTimerRef.current = window.setInterval(() => {
       refreshData();
-    }, refreshInterval);
+    }, AUTO_REFRESH_INTERVAL);
 
-    return () => clearInterval(intervalId);
-  }, [refreshInterval, refreshData]);
+    return () => {
+      if (refreshTimerRef.current) {
+        clearInterval(refreshTimerRef.current);
+      }
+    };
+  }, [id, refreshData]);
 
   const handleAddAddresses = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,9 +178,7 @@ export default function RoomDetail() {
       await addressService.addAddresses(id!, addressList);
       setAddressInput('');
       loadRoom();
-      loadAddressProfiles();
-      loadActivities();
-      loadPositions();
+      refreshData(); // Refresh all data and update cache
     } catch (error: any) {
       setAddError(error.response?.data?.error || 'Failed to add address.');
     }
@@ -162,9 +188,7 @@ export default function RoomDetail() {
     try {
       await addressService.removeAddress(id!, addressId);
       loadRoom();
-      loadAddressProfiles();
-      loadActivities();
-      loadPositions();
+      refreshData(); // Refresh all data and update cache
     } catch (error) {
       console.error('Failed to remove address:', error);
     }
@@ -332,40 +356,17 @@ export default function RoomDetail() {
         {/* Main Feed */}
         <div className="lg:col-span-8">
           <Card className="border-border bg-card/50 backdrop-blur-md overflow-hidden">
-            {/* Auto-refresh controls */}
+            {/* Auto-refresh status bar */}
             <div className="flex items-center justify-between px-8 py-4 bg-muted/50 border-b border-border">
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest">Auto Refresh:</span>
-                <div className="flex items-center gap-1">
-                  {REFRESH_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => setRefreshInterval(option.value)}
-                      className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all ${refreshInterval === option.value
-                        ? 'bg-neon-cyan text-midnight-950'
-                        : 'text-foreground/40 hover:text-foreground bg-muted border border-border'
-                        }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-neon-cyan animate-pulse' : 'bg-neon-green'}`} />
+                <span className="text-[10px] font-bold text-foreground/50 uppercase tracking-widest">
+                  {isRefreshing ? t('room_detail.refreshing') : t('room_detail.auto_refresh_active')}
+                </span>
               </div>
-              <div className="flex items-center gap-4">
-                {isRefreshing && (
-                  <span className="text-[10px] font-black text-neon-cyan uppercase tracking-widest animate-pulse">{t('room_detail.refreshing')}</span>
-                )}
-                <button
-                  onClick={refreshData}
-                  disabled={isRefreshing}
-                  className="flex items-center gap-2 text-[10px] font-black text-foreground/30 hover:text-neon-cyan uppercase tracking-widest transition-colors disabled:opacity-50"
-                >
-                  <svg className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  {t('room_detail.refresh_now')}
-                </button>
-              </div>
+              <span className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest">
+                {t('room_detail.last_updated', { time: formatTimestamp(lastRefresh.toISOString(), t) })}
+              </span>
             </div>
 
             <div className="grid grid-cols-2 bg-muted/30 p-2 border-b border-border">

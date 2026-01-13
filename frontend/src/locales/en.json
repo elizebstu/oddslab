@@ -119,6 +119,7 @@
         "copy_address": "Copy address",
         "monitoring": "Monitoring",
         "auto_refresh": "Auto Refresh:",
+        "auto_refresh_active": "Auto-refreshing every 2 min",
         "refreshing": "Refreshing...",
         "refresh_now": "Refresh Now",
         "live_monitoring": "Live Activity Monitoring",

@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useTranslate } from '../hooks/useTranslate';
 import type { Room } from '../services/roomService';
 import Card from './ui/Card';
 import Button from './ui/Button';
