@@ -1,5 +1,8 @@
-import axios from 'axios';
+// Re-export all Polymarket services for backward compatibility
+// This file maintains the existing API while the implementation has been
+// split into focused modules in the polymarket/ directory
 
+<<<<<<< HEAD
 interface Activity {
   address: string;
   type: 'buy' | 'sell' | 'redeem' | 'split' | 'merge' | 'reward' | 'conversion' | 'maker_rebate';
@@ -126,3 +129,17 @@ export const fetchPolymarketActivities = async (addresses: string[]): Promise<Ac
     return [];
   }
 };
+=======
+export {
+  resolveUsernameToAddress,
+  fetchPolymarketProfile,
+  fetchProfilesSequentially,
+  checkIfBot,
+  fetchPolymarketPositions,
+  fetchPolymarketActivities,
+  fetchProfilesFromActivities,
+  setProfile,
+} from './polymarket';
+
+export type { Activity, Position } from './polymarket';
+>>>>>>> a5fdcf759e4ebe53e126c5aa9e4737a6fdacffd8

@@ -1,0 +1,208 @@
+{
+    "nav": {
+        "explore": "Explore",
+        "dashboard": "Dashboard",
+        "login": "Login",
+        "register": "Register",
+        "logout": "Logout",
+        "account": "Account"
+    },
+    "hero": {
+        "badge": "Public Network",
+        "title_part1": "FOLLOW THE",
+        "title_part2": "WHALES,",
+        "title_part3": "OWN THE",
+        "title_highlight": "MARKET.",
+        "subtitle1": "STOP CHASING NOISE. START TRACKING THE SMART MONEY.",
+        "subtitle2": "REAL-TIME DEEP-CHAIN INTELLIGENCE FOR ELITE TRADERS.",
+        "cta_launch": "LAUNCH TERMINAL",
+        "cta_docs": "EXPLORE ROOMS",
+        "hud": {
+            "status": "SYSTEM_STATUS: OPERATIONAL",
+            "metric_label": "AGGREGATE WHALE PNL (24H)",
+            "sync": "LIVE_SYNC",
+            "scanning": "Scanning_Neural_Grid",
+            "active_rooms": "ACTIVE ROOMS",
+            "target_wallets": "TARGET WALLETS",
+            "signal_strength": "SIGNAL_STRENGTH",
+            "crypto_active": "CRYPTOGRAPHY_ACTIVE"
+        },
+        "deco_whales": "WHALES",
+        "deco_trades": "TRADES"
+    },
+    "features": {
+        "title": "Surgical",
+        "title_highlight": "Intelligence",
+        "badge": "Proprietary Edge in Prediction Markets",
+        "telemetry": {
+            "title": "Whale Telemetry",
+            "desc": "Real-time telemetry on the world's most aggressive traders. Every buy, every sell, zero delay."
+        },
+        "neural": {
+            "title": "Neural Aggregation",
+            "desc": "We merge chain-data with social metadata to build comprehensive profiles of the players moving markets."
+        },
+        "shield": {
+            "title": "Wash Shield",
+            "desc": "Identifies bot manipulation and wash-trading instantly. If it's fake volume, you'll know first."
+        }
+    },
+    "cta": {
+        "title": "Access the",
+        "title_highlight": "Ultimate",
+        "title_suffix": "Edge.",
+        "button_launch": "Launch Now",
+        "button_sync": "Operator Sync"
+    },
+    "dashboard": {
+        "title": "DASH",
+        "title_highlight": "BOARD",
+        "stats_active": "Active Rooms",
+        "stats_optimal": "Network Optimal",
+        "create_button": "Create New Room",
+        "no_rooms_title": "No Rooms Found",
+        "no_rooms_desc": "Create your first room to track whale movements and prediction market alerts.",
+        "create_first": "Create First Room",
+        "add_card": "Add New Room",
+        "modal_title": "Create Room",
+        "modal_subtitle": "Give your room a name to identify it in your dashboard.",
+        "modal_label": "Room Name",
+        "modal_placeholder": "e.g. My Whale Alerts",
+        "modal_error": "Room name exists or is invalid."
+    },
+    "explore": {
+        "badge": "Public Network",
+        "title": "EXPLORE",
+        "title_highlight": "ROOMS",
+        "subtitle": "Access shared rooms from across the network. Find the most profitable whale tracking configurations.",
+        "search_placeholder": "Search rooms or markets...",
+        "source_verified": "Source: Verified",
+        "stream_sources": "Stream Sources",
+        "verified": "Verified",
+        "active_stakes": "Active Stakes",
+        "recent_flux": "Recent Flux",
+        "zero_stakes": "Zero active stakes in this sector.",
+        "stream_static": "Stream is currently static.",
+        "open_transmission": "Open Transmission",
+        "monitoring_targets_public": "Monitoring {{count}} Open Targets",
+        "locked_title": "Channel Locked",
+        "locked_desc": "This data stream is either private or has been severed. Join the network for full access.",
+        "grid_archive": "Grid Archive",
+        "sort_recent": "Sort: Newest",
+        "sort_addresses": "Sort: Top Addresses",
+        "sort_name": "Sort: A-Z",
+        "stats_active": "ROOMS ACTIVE",
+        "no_rooms": "No public rooms available.",
+        "no_matches": "No matches for \"{{query}}\"",
+        "clear_search": "Clear Search",
+        "view_room": "View Room",
+        "addresses_count": "{{count}} Addresses"
+    },
+    "room_detail": {
+        "back": "Back to Dashboard",
+        "public_badge": "Public Room",
+        "loading": "Loading room intelligence...",
+        "not_found": "Room Not Found",
+        "not_found_desc": "This room does not exist or has been deleted.",
+        "monitoring_targets": "MONITORING TARGETS",
+        "make_private": "Make Private",
+        "make_public": "Make Public",
+        "share_link": "Share Link",
+        "link_copied": "Link Copied",
+        "addresses": "TRACKED ADDRESSES",
+        "last_updated": "LAST UPDATED: {{time}}",
+        "address_count": "Tracking {{count}} Addresses",
+        "address_count_sidebar": "{{count}}/50",
+        "add_placeholder": "Paste wallet addresses or usernames...",
+        "add_button": "Add Addresses",
+        "no_addresses": "No addresses tracked yet.",
+        "copy_address": "Copy address",
+        "monitoring": "Monitoring",
+        "auto_refresh": "Auto Refresh:",
+        "auto_refresh_active": "Auto-refreshing every 2 min",
+        "refreshing": "Refreshing...",
+        "refresh_now": "Refresh Now",
+        "live_monitoring": "Live Activity Monitoring",
+        "last_refresh": "Last: {{time}}",
+        "tabs": {
+            "activity": "Activity Feed",
+            "positions": "Whale Positions"
+        },
+        "no_activity": "No activity found.",
+        "no_positions": "No active positions found.",
+        "shares": "SHARES",
+        "held_by": "HELD BY:",
+        "type_buy": "buy",
+        "type_sell": "sell",
+        "not_found": {
+            "title": "Terminal Disconnected",
+            "desc": "The requested room does not exist or access has been revoked.",
+            "button": "Return to Dashboard"
+        }
+    },
+    "auth": {
+        "login": {
+            "title": "OPERATOR",
+            "title_highlight": "LOGIN",
+            "subtitle": "Access Your Whale Intelligence",
+            "email_label": "Email Address",
+            "pass_label": "Password",
+            "email_placeholder": "name@email.com",
+            "pass_placeholder": "••••••••",
+            "button": "Login",
+            "error": "Invalid email or password.",
+            "no_account": "New to Oddslab?",
+            "link": "Sign Up"
+        },
+        "register": {
+            "title": "TERMINAL",
+            "title_highlight": "SETUP",
+            "subtitle": "Account Initialization",
+            "email_label": "Email Address",
+            "pass_label": "Password",
+            "button": "Initialize Account",
+            "has_account": "Existing Operator?",
+            "link": "Access Terminal"
+        }
+    },
+    "common": {
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "create": "Create",
+        "save": "Save",
+        "delete": "Delete",
+        "loading": "Loading...",
+        "error": "Error",
+        "refresh": {
+            "off": "Off",
+            "1min": "1 min",
+            "5min": "5 min",
+            "1hour": "1 hour"
+        },
+        "yes": "YES",
+        "no": "NO",
+        "time": {
+            "now": "Just now",
+            "m_ago": "{{count}}m ago",
+            "h_ago": "{{count}}h ago",
+            "d_ago": "{{count}}d ago"
+        }
+    },
+    "footer": {
+        "desc": "High-fidelity intelligence network for high-stakes decision making. Track whales, follow signals, win markets.",
+        "ops": {
+            "title": "Operations",
+            "terminal": "Terminal",
+            "intel": "Intelligence"
+        },
+        "protocol": {
+            "title": "Protocol",
+            "api": "API Docs",
+            "whitepaper": "Whitepaper"
+        },
+        "status": {
+            "title": "Network Status",
+            "live": "Mainnet Live"
+        }
+    }
+}

@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authService } from '../services/authService';
+import { useTranslation } from 'react-i18next';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Login() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -15,67 +19,84 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
-      const { token, user } = await authService.login(email, password);
-      login(token, user);
+      await login(email, password);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+    } catch (error) {
+      setError(t('auth.login.error'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white text-gray-900 font-sans selection:bg-black selection:text-white">
-      <div className="max-w-md w-full p-8 border border-gray-100 rounded-2xl">
-        <div className="text-center mb-8">
-          <Link to="/" className="text-xl font-bold tracking-tight block mb-8">Oddslab</Link>
-          <h2 className="text-2xl font-bold tracking-tight mb-2">Welcome back</h2>
-          <p className="text-sm text-gray-500">Enter your details to access your account.</p>
+    <div className="flex-1 flex items-center justify-center p-6 relative overflow-hidden bg-midnight-950">
+      {/* Background Ambience Orbs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-cyan/5 blur-[120px] rounded-full animate-float" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-purple/5 blur-[120px] rounded-full animate-float" style={{ animationDelay: '-2s' }} />
+
+      <div className="w-full max-w-md relative z-10">
+        <div className="text-center mb-10">
+          <Link to="/" className="inline-flex items-center gap-3 mb-8 group">
+            <div className="w-9 h-9 bg-neon-green flex items-center justify-center skew-x-[-6deg] group-hover:shadow-neon-green transition-all">
+              <span className="text-midnight-950 font-black text-xl skew-x-[6deg]">O</span>
+            </div>
+            <span className="text-xl font-display font-black tracking-tighter text-white">ODDS<span className="text-white/40">LAB</span></span>
+          </Link>
+          <h1 className="text-4xl font-black uppercase tracking-tighter mb-2 italic text-white flex justify-center gap-3">
+            {t('auth.login.title')}<span className="text-neon-cyan glow-text-cyan">{t('auth.login.title_highlight')}</span>
+          </h1>
+          <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.3em]">{t('auth.login.subtitle')}</p>
         </div>
 
-        {error && (
-          <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-6 text-center">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Email</label>
-            <input
+        <Card variant="neon-cyan" className="p-8 md:p-10 border-white/10 backdrop-blur-xl bg-midnight-900/40">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Input
+              label={t('auth.login.email_label')}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder={t('auth.login.email_placeholder')}
               required
-              className="block w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all"
-              placeholder="name@example.com"
             />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Password</label>
-            <input
+            <Input
+              label={t('auth.login.pass_label')}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder={t('auth.login.pass_placeholder')}
               required
-              className="block w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all"
-              placeholder="••••••••"
             />
+
+            {error && (
+              <div className="bg-neon-red/10 border border-neon-red/50 p-4 skew-x-[-6deg]">
+                <div className="skew-x-[6deg] flex items-center gap-3 text-neon-red">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">{error}</span>
+                </div>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full h-12"
+              isLoading={loading}
+              disabled={loading}
+            >
+              {t('auth.login.button')}
+            </Button>
+          </form>
+
+          <div className="mt-8 pt-8 border-t border-white/5 text-center">
+            <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
+              {t('auth.login.no_account')}{' '}
+              <Link to="/register" className="text-neon-cyan font-black hover:text-white transition-colors">
+                {t('auth.login.link')}
+              </Link>
+            </p>
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-black text-white py-3.5 rounded-xl font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors mt-4"
-          >
-            {loading ? 'Logging in...' : 'Log in'}
-          </button>
-        </form>
-        <p className="text-center text-sm text-gray-500 mt-8">
-          Don't have an account? <Link to="/register" className="text-black font-medium hover:underline">Sign up</Link>
-        </p>
+        </Card>
       </div>
     </div>
   );

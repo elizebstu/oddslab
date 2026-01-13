@@ -1,0 +1,214 @@
+{
+    "nav": {
+        "explore": "探索",
+        "dashboard": "控制台",
+        "login": "登录",
+        "register": "注册",
+        "logout": "退出",
+        "account": "账户"
+    },
+    "hero": {
+        "badge": "公共网络",
+        "title_part1": "跟随",
+        "title_part2": "巨鲸,",
+        "title_part3": "掌控",
+        "title_highlight": "市场.",
+        "subtitle1": "停止追逐噪音。开始追踪聪明钱。",
+        "subtitle2": "为精英交易员提供的实时深层链上情报。",
+        "cta_launch": "启动终端",
+        "cta_docs": "探索房间",
+        "hud": {
+            "status": "系统状态: 运行中",
+            "metric_label": "巨鲸总收益 (24H)",
+            "sync": "实时同步",
+            "scanning": "正在扫描神经网格",
+            "active_rooms": "活跃房间",
+            "target_wallets": "目标钱包",
+            "signal_strength": "信号强度",
+            "crypto_active": "加密防护已启用"
+        },
+        "deco_whales": "巨鲸",
+        "deco_trades": "交易"
+    },
+    "features": {
+        "title": "精密",
+        "title_highlight": "情报",
+        "badge": "预测市场专属优势",
+        "telemetry": {
+            "title": "巨鲸遥测",
+            "desc": "全球最激进交易员的实时监控。每一次买入，每一次卖出，零延迟。"
+        },
+        "neural": {
+            "title": "神经聚合",
+            "desc": "我们将链上数据与社交元数据合并，构建推动市场玩家的全面画像。"
+        },
+        "shield": {
+            "title": "洗盘盾",
+            "desc": "立即识别机器人操纵和洗盘交易。如果是虚假成交量，你会第一个知道。"
+        }
+    },
+    "cta": {
+        "title": "通往",
+        "title_highlight": "终极",
+        "title_suffix": "优势.",
+        "button_launch": "立即启动",
+        "button_sync": "操作员同步"
+    },
+    "dashboard": {
+        "title": "控制",
+        "title_highlight": "台",
+        "stats_active": "活跃房间",
+        "stats_optimal": "网络处于最佳状态",
+        "create_button": "创建新房间",
+        "no_rooms_title": "未找到房间",
+        "no_rooms_desc": "创建您的第一个房间，以追踪巨鲸动态和预测市场警报。",
+        "create_first": "创建第一个房间",
+        "add_card": "添加新房间",
+        "modal_title": "创建房间",
+        "modal_subtitle": "给您的房间起一个名字，以便在控制台中识别它。",
+        "modal_label": "房间名称",
+        "modal_placeholder": "例如：我的巨鲸监控",
+        "modal_error": "房间名称已存在或无效。"
+    },
+    "explore": {
+        "badge": "公共网络",
+        "title": "探索",
+        "title_highlight": "房间",
+        "subtitle": "访问来自整个网络的共享房间。寻找最盈利的巨鲸追踪配置。",
+        "search_placeholder": "搜索房间或市场...",
+        "sort_recent": "排序：最新",
+        "sort_addresses": "排序：地址数",
+        "sort_name": "排序：名称",
+        "stats_active": "个活跃房间",
+        "no_rooms": "暂无公共房间。",
+        "no_matches": "未找到匹配 \"{{query}}\" 的结果",
+        "clear_search": "清除搜索",
+        "view_room": "查看房间",
+        "addresses_count": "{{count}} 个地址"
+    },
+    "room_detail": {
+        "back": "返回控制台",
+        "public_badge": "公共房间",
+        "visibility_private": "设为私有",
+        "visibility_public": "设为公开",
+        "share_link": "分享链接",
+        "link_copied": "链接已复制",
+        "addresses_title": "已追踪地址",
+        "address_count": "正在追踪 {{count}} 个地址",
+        "address_count_sidebar": "{{count}}/50",
+        "add_placeholder": "粘贴钱包地址或用户名...",
+        "add_button": "添加地址",
+        "no_addresses": "尚未追踪任何地址。",
+        "copy_address": "复制地址",
+        "loading": "正在加载房间...",
+        "not_found": "未找到房间",
+        "not_found_desc": "该房间不存在或已被删除。",
+        "monitoring_targets": "正在监控的神经目标",
+        "make_private": "设为私有",
+        "make_public": "设为公开",
+        "addresses": "地址列表",
+        "last_updated": "最后更新: {{time}}",
+        "monitoring": "监控中",
+        "auto_refresh": "自动刷新:",
+        "auto_refresh_active": "每2分钟自动刷新",
+        "refreshing": "正在刷新...",
+        "refresh_now": "立即刷新",
+        "live_monitoring": "实时活动监控",
+        "last_refresh": "上次刷新: {{time}}",
+        "tabs": {
+            "activity": "动态",
+            "positions": "总持仓"
+        },
+        "no_activity": "目前没有动态更新。",
+        "no_positions": "该领域暂无活跃持仓。",
+        "shares": "份",
+        "held_by": "持有者：",
+        "source_verified": "来源：已验证",
+        "stream_sources": "数据来源",
+        "verified": "已验证",
+        "active_stakes": "总持仓",
+        "recent_flux": "动态",
+        "zero_stakes": "该领域暂无活跃持仓。",
+        "stream_static": "目前没有动态更新。",
+        "open_transmission": "开放传输中",
+        "monitoring_targets_public": "正在监控 {{count}} 个开放目标",
+        "locked_title": "频道已锁定",
+        "locked_desc": "该数据流为私有或已中断。加入网络以获取完整访问权限。",
+        "grid_archive": "网格存档",
+        "type_buy": "买入",
+        "type_sell": "卖出",
+        "not_found_error": {
+            "title": "终端连接已断开",
+            "desc": "所请求的房间不存在或访问权限已被撤销。",
+            "button": "返回控制台"
+        }
+    },
+    "auth": {
+        "login": {
+            "title": "操作员",
+            "title_highlight": "登录",
+            "subtitle": "访问您的巨鲸情报",
+            "email_label": "邮箱地址",
+            "pass_label": "密码",
+            "email_placeholder": "name@email.com",
+            "pass_placeholder": "••••••••",
+            "button": "登录",
+            "error": "邮箱或密码无效。",
+            "no_account": "新加入 Oddslab？",
+            "link": "注册账户"
+        },
+        "register": {
+            "title": "终端",
+            "title_highlight": "设置",
+            "subtitle": "开始追踪聪明钱",
+            "email_label": "邮箱地址",
+            "pass_label": "密码",
+            "email_placeholder": "name@email.com",
+            "pass_placeholder": "••••••••",
+            "button": "创建账户",
+            "error": "注册失败。请重试。",
+            "has_account": "已有操作权限？",
+            "link": "登录终端"
+        }
+    },
+    "common": {
+        "cancel": "取消",
+        "confirm": "确认",
+        "create": "创建",
+        "save": "保存",
+        "delete": "删除",
+        "loading": "加载中...",
+        "error": "错误",
+        "refresh": {
+            "off": "关闭",
+            "1min": "1 分钟",
+            "5min": "5 分钟",
+            "1hour": "1 小时"
+        },
+        "yes": "是",
+        "no": "否",
+        "time": {
+            "now": "刚刚",
+            "m_ago": "{{count}} 分钟前",
+            "h_ago": "{{count}} 小时前",
+            "d_ago": "{{count}} 天前"
+        }
+    },
+    "footer": {
+        "desc": "为高风险决策提供的高保真情报网络。追踪巨鲸，跟随信号，赢得市场。",
+        "ops": {
+            "title": "运营",
+            "terminal": "终端",
+            "intel": "情报"
+        },
+        "protocol": {
+            "title": "协议",
+            "api": "API 文档",
+            "whitepaper": "白皮书"
+        },
+        "status": {
+            "title": "网络状态",
+            "live": "主网运行中"
+        }
+    }
+}

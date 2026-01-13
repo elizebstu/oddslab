@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import RoomCard from '../components/RoomCard';
+import LoadingSpinner from '../components/LoadingSpinner';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Modal from '../components/ui/Modal';
 import { roomService } from '../services/roomService';
 import type { Room } from '../services/roomService';
-import { useAuth } from '../hooks/useAuth';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [roomName, setRoomName] = useState('');
-  const { logout } = useAuth();
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadRooms();
@@ -28,6 +34,8 @@ export default function Dashboard() {
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setCreating(true);
     try {
       await roomService.createRoom(roomName);
       setRoomName('');
@@ -35,11 +43,14 @@ export default function Dashboard() {
       loadRooms();
     } catch (error) {
       console.error('Failed to create room:', error);
+      setError(t('dashboard.modal_error'));
+    } finally {
+      setCreating(false);
     }
   };
 
   const handleDeleteRoom = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this room?')) return;
+    if (!confirm(t('common.confirm_delete', { defaultValue: 'Are you sure you want to delete this room? This cannot be undone.' }))) return;
     try {
       await roomService.deleteRoom(id);
       loadRooms();
@@ -48,116 +59,123 @@ export default function Dashboard() {
     }
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-white text-sm text-gray-500">
-      Loading...
-    </div>
-  );
+  if (loading) {
+    return <LoadingSpinner fullScreen text={t('common.loading')} />;
+  }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 font-sans selection:bg-black selection:text-white">
-      <nav className="w-full border-b border-gray-100">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex justify-between items-center">
-          <Link to="/" className="text-xl font-bold tracking-tight">Oddslab</Link>
-          <button
-            onClick={logout}
-            className="text-sm font-medium text-gray-500 hover:text-black transition-colors"
-          >
-            Log out
-          </button>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 relative animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-16 border-l-4 border-neon-cyan pl-6 py-2">
+        <div className="space-y-1">
+          <h1 className="text-4xl md:text-5xl font-display font-black uppercase tracking-tighter italic text-foreground">
+            {t('dashboard.title')}<span className="text-neon-cyan glow-text-cyan">{t('dashboard.title_highlight')}</span>
+          </h1>
+          <div className="flex items-center gap-4 text-foreground/30 text-[10px] font-bold uppercase tracking-[0.2em]">
+            <span>{rooms.length} {t('dashboard.stats_active')}</span>
+            <span className="w-1 h-1 bg-foreground/10 rounded-full" />
+            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-pulse" /> {t('dashboard.stats_optimal')}</span>
+          </div>
         </div>
-      </nav>
-
-      <div className="max-w-5xl mx-auto px-6 py-12">
-        <div className="flex justify-between items-end mb-12">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight mb-2">My Rooms</h2>
-            <p className="text-gray-500">Manage your tracking spaces.</p>
-          </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="bg-black text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
-          >
-            Create Room
-          </button>
-        </div>
-
-        {rooms.length === 0 ? (
-          <div className="text-center py-24 border border-dashed border-gray-200 rounded-2xl">
-            <p className="text-gray-500 mb-6">No rooms yet.</p>
-            <button
-              onClick={() => setShowModal(true)}
-              className="text-black font-medium hover:underline"
-            >
-              Create your first room logic
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {rooms.map((room) => (
-              <div key={room.id} className="group p-6 border border-gray-100 rounded-2xl hover:border-gray-300 transition-colors">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-semibold tracking-tight">{room.name}</h3>
-                  <span className="text-xs font-mono text-gray-400 bg-gray-50 px-2 py-1 rounded">
-                    {room.addresses?.length || 0} ADDR
-                  </span>
-                </div>
-
-                <div className="flex gap-3 mt-8">
-                  <Link
-                    to={`/rooms/${room.id}`}
-                    className="flex-1 bg-gray-50 text-black px-4 py-2 rounded-lg text-sm font-medium text-center hover:bg-gray-100 transition-colors"
-                  >
-                    View
-                  </Link>
-                  <button
-                    onClick={() => handleDeleteRoom(room.id)}
-                    className="px-4 py-2 text-gray-400 hover:text-red-600 text-sm font-medium transition-colors"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <Button
+          onClick={() => setShowModal(true)}
+          size="lg"
+          variant="primary"
+          className="h-14 px-10"
+        >
+          {t('dashboard.create_button')}
+        </Button>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-2xl max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold mb-6 tracking-tight">Create New Room</h3>
-            <form onSubmit={handleCreateRoom}>
-              <div className="mb-6">
-                <input
-                  type="text"
-                  value={roomName}
-                  onChange={(e) => setRoomName(e.target.value)}
-                  placeholder="Room Name"
-                  required
-                  autoFocus
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all"
-                />
-              </div>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-black text-white px-4 py-3 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
-                >
-                  Create Room
-                </button>
-              </div>
-            </form>
+      {/* Main Grid */}
+      {rooms.length === 0 ? (
+        <div className="bg-card/50 border border-border p-20 text-center relative overflow-hidden group">
+          <div className="w-20 h-20 bg-muted border border-border flex items-center justify-center mx-auto mb-10 skew-x-[-6deg] group-hover:border-neon-cyan transition-all">
+            <div className="skew-x-[6deg] text-foreground/20">
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
           </div>
+          <h2 className="text-2xl font-black uppercase tracking-tighter mb-4 italic text-foreground/80">{t('dashboard.no_rooms_title')}</h2>
+          <p className="text-foreground/40 max-w-sm mx-auto mb-10 text-xs font-bold uppercase tracking-widest leading-relaxed">
+            {t('dashboard.no_rooms_desc')}
+          </p>
+          <Button onClick={() => setShowModal(true)} variant="cyber" className="px-10">
+            {t('dashboard.create_first')}
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {rooms.map((room) => (
+            <RoomCard
+              key={room.id}
+              room={room}
+              showActions
+              onDelete={handleDeleteRoom}
+            />
+          ))}
+
+          {/* Add New Room Card */}
+          <button
+            onClick={() => setShowModal(true)}
+            className="group flex flex-col items-center justify-center p-8 border border-dashed border-border bg-card/30 hover:bg-card hover:border-neon-cyan/50 transition-all min-h-[260px] skew-x-[-2deg]"
+          >
+            <div className="skew-x-[2deg] flex flex-col items-center">
+              <div className="w-12 h-12 bg-muted border border-border flex items-center justify-center mb-6 skew-x-[-6deg] group-hover:border-neon-cyan transition-all">
+                <div className="skew-x-[6deg] text-foreground/20 group-hover:text-neon-cyan">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/20 group-hover:text-foreground transition-colors">{t('dashboard.add_card')}</span>
+            </div>
+          </button>
         </div>
       )}
+
+      {/* Create Room Modal */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => !creating && setShowModal(false)}
+        title={t('dashboard.modal_title')}
+        footer={
+          <div className="flex gap-3 w-full">
+            <Button
+              variant="outline"
+              onClick={() => setShowModal(false)}
+              disabled={creating}
+              className="flex-1"
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={handleCreateRoom}
+              disabled={creating || !roomName.trim()}
+              isLoading={creating}
+              className="flex-1"
+            >
+              {t('common.create')}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-6">
+          <p className="text-[11px] text-foreground/40 uppercase tracking-widest font-bold leading-relaxed">
+            {t('dashboard.modal_subtitle')}
+          </p>
+          <Input
+            label={t('dashboard.modal_label')}
+            value={roomName}
+            onChange={(e) => setRoomName(e.target.value)}
+            placeholder={t('dashboard.modal_placeholder')}
+            autoFocus
+            disabled={creating}
+            error={error}
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

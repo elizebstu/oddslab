@@ -1,0 +1,108 @@
+import axios from 'axios';
+import { CacheMap } from './cache';
+import { POLYMARKET_DATA_API, CACHE_TTL } from './constants';
+import { updateProfileFromActivity, getProfileDisplayName } from './profileCache';
+import type { Activity, PolymarketActivity } from './types';
+
+// Cache for activities
+const activityCache = new CacheMap<Activity[]>(CACHE_TTL);
+
+/**
+ * Fetch trading activities for addresses using Polymarket Data API
+ * Profile info is extracted directly from the activity response (name, pseudonym fields)
+ */
+export const fetchPolymarketActivities = async (addresses: string[]): Promise<Activity[]> => {
+  const cacheKey = addresses.sort().join(',');
+
+  const cached = activityCache.get(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+
+  try {
+    const allActivities: Activity[] = [];
+    const oneDayAgo = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
+
+    for (const address of addresses) {
+      try {
+        // Use /activity endpoint instead of /trades
+        const response = await axios.get<PolymarketActivity[]>(`${POLYMARKET_DATA_API}/activity`, {
+          params: {
+            user: address.toLowerCase(),
+            limit: 500,
+          },
+          timeout: 15000,
+        });
+
+        if (response.data && Array.isArray(response.data)) {
+          const activities = response.data;
+
+          // Filter activities from last 24 hours
+          const recentActivities = activities.filter((activity) => activity.timestamp >= oneDayAgo);
+
+          const mappedActivities = recentActivities.map((activity) => {
+            // Determine type based on activity type and side
+            let type: Activity['type'];
+
+            if (activity.type === 'TRADE' && activity.side) {
+              type = activity.side === 'BUY' ? 'buy' : 'sell';
+            } else if (activity.type === 'REDEEM') {
+              type = 'redeem';
+            } else if (activity.type === 'SPLIT') {
+              type = 'split';
+            } else if (activity.type === 'MERGE') {
+              type = 'merge';
+            } else if (activity.type === 'REWARD') {
+              type = 'reward';
+            } else if (activity.type === 'CONVERSION') {
+              type = 'conversion';
+            } else if (activity.type === 'MAKER_REBATE') {
+              type = 'maker_rebate';
+            } else {
+              type = 'buy'; // fallback
+            }
+
+            // Extract profile info directly from activity response
+            // The Data API includes name and pseudonym in the activity data
+            const displayName = activity.name || activity.pseudonym;
+
+            // Update shared profile cache for use by positions
+            if (displayName) {
+              updateProfileFromActivity(address, displayName);
+            }
+
+            return {
+              address,
+              type,
+              market: activity.title || activity.conditionId,
+              amount: Math.round(activity.usdcSize * 100) / 100, // Use usdcSize directly
+              timestamp: new Date(activity.timestamp * 1000).toISOString(),
+              userName: displayName,
+              outcome: activity.outcome,
+              icon: activity.icon,
+              transactionHash: activity.transactionHash,
+            } as Activity;
+          });
+
+          allActivities.push(...mappedActivities);
+        }
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`Error fetching activities for address ${address}:`, message);
+      }
+    }
+
+    const sortedActivities = allActivities.sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    // Limit to 100 most recent activities
+    const limitedActivities = sortedActivities.slice(0, 100);
+
+    activityCache.set(cacheKey, limitedActivities);
+    return limitedActivities;
+  } catch (error) {
+    console.error('Error fetching Polymarket activities:', error);
+    return [];
+  }
+};
