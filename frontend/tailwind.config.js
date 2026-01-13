@@ -44,12 +44,12 @@ export default {
         foreground: 'var(--muted-foreground)',
       },
     },
+    fontFamily: {
+      display: ['Space Grotesk', 'Outfit', 'system-ui', 'sans-serif'],
+      sans: ['Inter', 'system-ui', 'sans-serif'],
+      mono: ['JetBrains Mono', 'Menlo', 'monospace'],
+    },
     extend: {
-      fontFamily: {
-        display: ['Space Grotesk', 'Outfit', 'system-ui', 'sans-serif'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Menlo', 'monospace'],
-      },
       boxShadow: {
         'neon-green': '0 0 15px rgba(0, 255, 136, 0.4)',
         'neon-cyan': '0 0 20px rgba(0, 240, 255, 0.5)',
