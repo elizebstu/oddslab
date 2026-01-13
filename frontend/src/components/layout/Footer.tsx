@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export default function Footer() {
+    const { t } = useTranslation();
+
     return (
         <footer className="bg-midnight-950 border-t-2 border-white/5 py-12 mt-20 relative overflow-hidden">
             {/* Background Grid Polish */}
@@ -13,33 +16,33 @@ export default function Footer() {
                             <div className="w-8 h-8 bg-neon-green flex items-center justify-center skew-x-[-12deg]">
                                 <span className="text-midnight-950 font-black text-xl skew-x-[12deg]">O</span>
                             </div>
-                            <span className="text-xl font-display font-black tracking-tighter">ODDSLAB</span>
+                            <span className="text-xl font-display font-black tracking-tighter uppercase">Oddslab</span>
                         </Link>
                         <p className="text-xs text-white/40 leading-relaxed font-medium uppercase tracking-wider">
-                            High-fidelity intelligence network for high-stakes decision making. Track whales, follow signals, win markets.
+                            {t('footer.desc')}
                         </p>
                     </div>
 
                     <div className="md:col-span-8 grid grid-cols-2 sm:grid-cols-3 gap-8">
                         <div>
-                            <h4 className="text-[10px] font-black text-neon-cyan uppercase tracking-[0.2em] mb-4">Operations</h4>
+                            <h4 className="text-[10px] font-black text-neon-cyan uppercase tracking-[0.2em] mb-4">{t('footer.ops.title')}</h4>
                             <ul className="space-y-3">
-                                <li><Link to="/explore" className="text-xs text-white/50 hover:text-neon-cyan transition-colors uppercase font-bold">Terminal</Link></li>
-                                <li><Link to="/rooms" className="text-xs text-white/50 hover:text-neon-cyan transition-colors uppercase font-bold">Intelligence</Link></li>
+                                <li><Link to="/explore" className="text-xs text-white/50 hover:text-neon-cyan transition-colors uppercase font-bold">{t('footer.ops.terminal')}</Link></li>
+                                <li><Link to="/dashboard" className="text-xs text-white/50 hover:text-neon-cyan transition-colors uppercase font-bold">{t('footer.ops.intel')}</Link></li>
                             </ul>
                         </div>
                         <div>
-                            <h4 className="text-[10px] font-black text-neon-purple uppercase tracking-[0.2em] mb-4">Protocol</h4>
+                            <h4 className="text-[10px] font-black text-neon-purple uppercase tracking-[0.2em] mb-4">{t('footer.protocol.title')}</h4>
                             <ul className="space-y-3">
-                                <li><a href="#" className="text-xs text-white/50 hover:text-neon-purple transition-colors uppercase font-bold">API Docs</a></li>
-                                <li><a href="#" className="text-xs text-white/50 hover:text-neon-purple transition-colors uppercase font-bold">Whitepaper</a></li>
+                                <li><a href="#" className="text-xs text-white/50 hover:text-neon-purple transition-colors uppercase font-bold">{t('footer.protocol.api')}</a></li>
+                                <li><a href="#" className="text-xs text-white/50 hover:text-neon-purple transition-colors uppercase font-bold">{t('footer.protocol.whitepaper')}</a></li>
                             </ul>
                         </div>
                         <div className="col-span-2 sm:col-span-1">
-                            <h4 className="text-[10px] font-black text-neon-green uppercase tracking-[0.2em] mb-4">Network Status</h4>
+                            <h4 className="text-[10px] font-black text-neon-green uppercase tracking-[0.2em] mb-4">{t('footer.status.title')}</h4>
                             <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse shadow-neon-green" />
-                                <span className="text-[10px] font-bold text-neon-green uppercase tracking-widest">Mainnet Live</span>
+                                <span className="text-[10px] font-bold text-neon-green uppercase tracking-widest">{t('footer.status.live')}</span>
                             </div>
                         </div>
                     </div>

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useTranslate } from '../hooks/useTranslate';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -15,10 +17,16 @@ import {
 import type { Room, Address } from '../services/roomService';
 import { formatAddress, formatDisplayName, formatTimestamp, getRankBadge } from '../utils/formatting';
 
+function MarketTitle({ text }: { text: string }) {
+  const translated = useTranslate(text);
+  return <>{translated}</>;
+}
+
 type Tab = 'positions' | 'activity';
 
 export default function PublicRoom() {
   const { id } = useParams<{ id: string }>();
+  const { t } = useTranslation();
   const [room, setRoom] = useState<Room | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -104,7 +112,7 @@ export default function PublicRoom() {
   };
 
   if (loading) {
-    return <LoadingSpinner fullScreen text="Accessing Open Protocol..." />;
+    return <LoadingSpinner fullScreen text={t('room_detail.loading')} />;
   }
 
   if (!room) {
@@ -116,10 +124,10 @@ export default function PublicRoom() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-black uppercase tracking-tighter mb-4 italic">Channel Locked</h1>
-          <p className="text-white/40 mb-8 text-xs font-bold uppercase tracking-widest leading-relaxed">This data stream is either private or has been severed. Join the network for full access.</p>
+          <h1 className="text-2xl font-black uppercase tracking-tighter mb-4 italic">{t('room_detail.locked_title')}</h1>
+          <p className="text-white/40 mb-8 text-xs font-bold uppercase tracking-widest leading-relaxed">{t('room_detail.locked_desc')}</p>
           <Button onClick={() => navigate('/explore')} variant="primary" className="w-full">
-            Return to Grid
+            {t('room_detail.grid_archive')}
           </Button>
         </Card>
       </div>
@@ -134,21 +142,21 @@ export default function PublicRoom() {
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="px-3 py-1 bg-neon-green text-midnight-950 text-[10px] font-black uppercase tracking-widest skew-x-[-12deg]">
-                <span className="skew-x-[12deg]">Open Transmission</span>
+                <span className="skew-x-[12deg]">{t('room_detail.open_transmission')}</span>
               </div>
             </div>
             <h1 className="text-5xl font-display font-black uppercase tracking-tighter italic text-white">{room.name}</h1>
             <p className="text-sm font-bold text-white/40 uppercase tracking-widest leading-none">
-              Monitoring {addresses.length || room.addresses?.length || 0} Open Targets
+              {t('room_detail.monitoring_targets_public', { count: addresses.length || room.addresses?.length || 0 })}
             </p>
           </div>
 
           <div className="flex items-center gap-4">
             <Button variant="outline" onClick={() => navigate('/explore')} className="min-w-[160px]">
-              Grid Archive
+              {t('room_detail.grid_archive')}
             </Button>
             <Button variant="primary" onClick={() => navigate('/register')} className="min-w-[160px] shadow-neon-green">
-              Join Protocol
+              {t('nav.register')}
             </Button>
           </div>
         </div>
@@ -159,7 +167,7 @@ export default function PublicRoom() {
           <Card className="p-8 border-2 border-white/5 bg-midnight-900/80">
             <h2 className="text-xl font-black uppercase tracking-tighter mb-8 italic flex items-center gap-3">
               <span className="w-2 h-8 bg-white/20" />
-              Stream Sources
+              {t('room_detail.stream_sources')}
             </h2>
             <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
               {addresses.map((addr) => (
@@ -178,7 +186,7 @@ export default function PublicRoom() {
                         <p className="text-xs font-mono font-black text-white/70 truncate">
                           {formatAddress(addr.address)}
                         </p>
-                        <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] mt-1">Source: Verified</p>
+                        <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] mt-1">{t('room_detail.source_verified')}</p>
                       </>
                     )}
                   </div>
@@ -209,7 +217,7 @@ export default function PublicRoom() {
                   : 'text-white/40 hover:text-white hover:bg-white/5'
                   }`}
               >
-                <span className="skew-x-[12deg]">Active Stakes</span>
+                <span className="skew-x-[12deg]">{t('room_detail.active_stakes')}</span>
               </button>
               <button
                 onClick={() => setActiveTab('activity')}
@@ -218,7 +226,7 @@ export default function PublicRoom() {
                   : 'text-white/40 hover:text-white hover:bg-white/5'
                   }`}
               >
-                <span className="skew-x-[12deg]">Recent Flux</span>
+                <span className="skew-x-[12deg]">{t('room_detail.recent_flux')}</span>
               </button>
             </div>
 
@@ -227,7 +235,7 @@ export default function PublicRoom() {
                 <div className="space-y-6">
                   {positions.length === 0 ? (
                     <div className="py-24 text-center">
-                      <p className="text-lg font-black text-white/20 uppercase italic tracking-tighter">Zero active stakes in this sector.</p>
+                      <p className="text-lg font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.zero_stakes')}</p>
                     </div>
                   ) : (
                     positions.map((pos, idx) => {
@@ -239,22 +247,22 @@ export default function PublicRoom() {
                               <div className="flex items-center gap-3">
                                 {badge && <span className="text-2xl">{badge.emoji}</span>}
                                 <h3 className="text-xl font-black text-white group-hover:text-neon-green transition-colors leading-[0.9] uppercase tracking-tighter">
-                                  {pos.market}
+                                  <MarketTitle text={pos.market} />
                                 </h3>
                               </div>
                               <div className="flex items-center gap-4">
                                 <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${pos.outcome.toLowerCase() === 'yes' ? 'bg-neon-green/20 text-neon-green border border-neon-green/30' : 'bg-neon-red/20 text-neon-red border border-neon-red/30'
                                   }`}>
-                                  {pos.outcome}
+                                  {pos.outcome.toLowerCase() === 'yes' ? t('common.yes') : t('common.no')}
                                 </span>
                                 <div className="flex items-center gap-2 text-[10px] font-black text-white/30 tracking-widest uppercase truncate max-w-[150px]">
-                                  <span className="text-white">{pos.totalShares.toLocaleString()}</span> SHARES
+                                  <span className="text-white">{pos.totalShares.toLocaleString()}</span> {t('room_detail.shares')}
                                 </div>
                               </div>
                               {/* Show holders */}
                               {pos.holders && pos.holders.length > 0 && (
                                 <div className="flex flex-wrap items-center gap-2 mt-3">
-                                  <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">HELD BY:</span>
+                                  <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">{t('room_detail.held_by')}</span>
                                   {pos.holders.map((holder, hIdx) => (
                                     <span
                                       key={hIdx}
@@ -282,7 +290,7 @@ export default function PublicRoom() {
                 <div className="space-y-6 font-mono">
                   {activities.length === 0 ? (
                     <div className="py-24 text-center">
-                      <p className="text-lg font-black text-white/20 uppercase italic tracking-tighter">Stream is currently static.</p>
+                      <p className="text-lg font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.stream_static')}</p>
                     </div>
                   ) : (
                     activities.map((act, idx) => {
@@ -305,18 +313,22 @@ export default function PublicRoom() {
                                 </div>
                               </div>
                               <div className="min-w-0">
-                                <p className="text-xs font-black text-white mb-1 uppercase tracking-tighter truncate">{act.market}</p>
+                                <p className="text-xs font-black text-white mb-1 uppercase tracking-tighter truncate">
+                                  <MarketTitle text={act.market} />
+                                </p>
                                 <div className="flex items-center gap-3 text-[8px] font-bold text-white/30 uppercase tracking-[0.2em]">
                                   <span className="text-white/60">{formatDisplayName(act)}</span>
                                   <span className="text-white/20">•</span>
-                                  <span className={isBuy ? 'text-neon-green' : isSell ? 'text-neon-red' : ''}>{act.type}</span>
+                                  <span className={isBuy ? 'text-neon-green' : isSell ? 'text-neon-red' : ''}>
+                                    {isBuy ? t('room_detail.type_buy') : isSell ? t('room_detail.type_sell') : act.type}
+                                  </span>
                                   <span className="text-white/20">•</span>
                                   <span className="text-white">${act.amount.toLocaleString()}</span>
                                 </div>
                               </div>
                             </div>
                             <div className="text-[8px] font-bold text-white/10 uppercase tracking-widest pt-1">
-                              {formatTimestamp(act.timestamp)}
+                              {formatTimestamp(act.timestamp, t)}
                             </div>
                           </div>
                         </div>

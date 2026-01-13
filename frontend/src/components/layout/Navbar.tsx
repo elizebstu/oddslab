@@ -1,17 +1,20 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../ui/Button';
 import ThemeToggle from '../ui/ThemeToggle';
+import LanguageToggle from '../ui/LanguageToggle';
 
 
 export default function Navbar() {
     const { user, logout } = useAuth();
     const location = useLocation();
+    const { t } = useTranslation();
 
     const isActive = (path: string) => location.pathname === path;
 
     return (
-        <nav className="sticky top-0 z-50 bg-midnight-950/80 backdrop-blur-xl border-b-2 border-white/5">
+        <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b-2 border-border">
             <div className="max-w-7xl mx-auto px-4 sm:px-6">
                 <div className="flex justify-between items-center h-20">
                     <div className="flex items-center gap-12">
@@ -26,16 +29,15 @@ export default function Navbar() {
 
                         <div className="hidden md:flex items-center gap-8">
                             {[
-                                { name: 'Home', path: '/' },
-                                { name: 'Explore', path: '/explore' },
-                                { name: 'Dashboard', path: '/dashboard' },
+                                { name: t('nav.explore'), path: '/explore' },
+                                { name: t('nav.dashboard'), path: '/dashboard' },
                             ].map((link) => (
                                 <Link
                                     key={link.path}
                                     to={link.path}
                                     className={`
                     relative py-2 text-xs font-bold uppercase tracking-widest transition-all
-                    ${isActive(link.path) ? 'text-neon-green glow-text-green' : 'text-white/50 hover:text-white'}
+                    ${isActive(link.path) ? 'text-neon-green glow-text-green' : 'text-foreground/50 hover:text-foreground'}
                   `}
                                 >
                                     {link.name}
@@ -48,24 +50,27 @@ export default function Navbar() {
                     </div>
 
                     <div className="flex items-center gap-6">
-                        <ThemeToggle />
+                        <div className="flex items-center gap-3">
+                            <LanguageToggle />
+                            <ThemeToggle />
+                        </div>
                         {user ? (
                             <>
                                 <div className="hidden sm:flex flex-col items-end mr-2">
-                                    <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Account</span>
+                                    <span className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest">{t('nav.account')}</span>
                                     <span className="text-xs font-mono font-bold text-neon-cyan">{user.email.split('@')[0]}</span>
                                 </div>
                                 <Button variant="cyber" size="sm" onClick={logout}>
-                                    Logout
+                                    {t('nav.logout')}
                                 </Button>
                             </>
                         ) : (
                             <>
-                                <Link to="/login" className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-white transition-colors">
-                                    Login
+                                <Link to="/login" className="text-xs font-bold uppercase tracking-widest text-foreground/50 hover:text-foreground transition-colors">
+                                    {t('nav.login')}
                                 </Link>
                                 <Button variant="primary" size="sm" to="/register">
-                                    Sign Up
+                                    {t('nav.register')}
                                 </Button>
                             </>
                         )}

@@ -1,7 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 
 export default function Home() {
+  const { t } = useTranslation();
+
   return (
     <div className="relative flex flex-col bg-background min-h-screen">
       {/* PREMIUM HERO SECTION */}
@@ -26,39 +29,39 @@ export default function Home() {
                   <span className="w-2 h-2 bg-neon-green rounded-full relative" />
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-[0.4em] text-foreground/60 skew-x-[6deg]">
-                  Oddslab Protocol <span className="text-neon-cyan">v4.0_Live</span>
+                  {t('hero.badge')} <span className="text-neon-cyan">v4.0_Live</span>
                 </span>
               </div>
 
               <div className="relative group">
                 {/* Kinetic Headline Background Echoes */}
                 <h1 className="absolute -top-6 -left-4 text-7xl md:text-9xl font-display font-black text-outline-white opacity-5 select-none pointer-events-none uppercase italic tracking-tighter">
-                  WHALES
+                  {t('hero.deco_whales')}
                 </h1>
                 <h1 className="absolute -bottom-6 left-12 text-7xl md:text-9xl font-display font-black text-outline-cyan opacity-5 select-none pointer-events-none uppercase italic tracking-tighter">
-                  TRADES
+                  {t('hero.deco_trades')}
                 </h1>
 
                 <h1 className="text-6xl md:text-8xl font-display font-black tracking-tighter leading-[0.85] uppercase text-foreground italic relative z-10">
-                  Follow the <span className="text-neon-cyan glow-text-cyan relative inline-block">
-                    Whales
+                  {t('hero.title_part1')} <span className="text-neon-cyan glow-text-cyan relative inline-block">
+                    {t('hero.title_part2')}
                     <span className="absolute -inset-1 bg-neon-cyan/10 blur-xl -z-10 animate-pulse-slow" />
                   </span>,<br />
-                  Own the <span className="text-neon-green glow-text-green">Market.</span>
+                  {t('hero.title_part3')} <span className="text-neon-green glow-text-green">{t('hero.title_highlight')}</span>
                 </h1>
               </div>
 
               <p className="text-lg md:text-xl text-foreground/50 max-w-xl leading-relaxed font-bold uppercase tracking-tight italic border-l-2 border-border pl-6">
-                Stop chasing noise. Start tracking the smart money.
-                <span className="text-foreground block mt-2">Real-time deep-chain intelligence for elite traders.</span>
+                {t('hero.subtitle1')}
+                <span className="text-foreground block mt-2">{t('hero.subtitle2')}</span>
               </p>
 
               <div className="flex flex-col sm:flex-row gap-6 pt-4">
                 <Button size="lg" variant="primary" to="/register" className="h-16 px-12 text-sm shadow-neon-green/20">
-                  Launch Terminal
+                  {t('hero.cta_launch')}
                 </Button>
                 <Button size="lg" variant="cyber" to="/explore" className="h-16 px-12 text-sm">
-                  Explore Rooms
+                  {t('hero.cta_docs')}
                 </Button>
               </div>
             </div>
@@ -81,15 +84,15 @@ export default function Home() {
                       <div className="w-2 h-2 rounded-full bg-yellow-500/50" />
                       <div className="w-2 h-2 rounded-full bg-neon-green/50" />
                     </div>
-                    <span className="text-[9px] font-mono text-foreground/40 uppercase tracking-[0.3em]">System_Status: Operational</span>
+                    <span className="text-[9px] font-mono text-foreground/40 uppercase tracking-[0.3em]">{t('hero.hud.status')}</span>
                   </div>
 
                   <div className="p-8 space-y-8 relative z-30">
                     {/* Metric 1 */}
                     <div className="space-y-2">
                       <div className="flex justify-between items-end">
-                        <span className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest">Aggregate Whale PnL (24H)</span>
-                        <span className="text-[10px] font-mono text-neon-green">LIVE_SYNC</span>
+                        <span className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest">{t('hero.hud.metric_label')}</span>
+                        <span className="text-[10px] font-mono text-neon-green">{t('hero.hud.sync')}</span>
                       </div>
                       <div className="flex items-baseline gap-3">
                         <span className="text-5xl font-mono font-black text-neon-green drop-shadow-[0_0_20px_rgba(0,255,136,0.5)] glow-text-green">+$2.48M</span>
@@ -111,7 +114,7 @@ export default function Home() {
                       </svg>
                       <div className="absolute inset-0 bg-gradient-to-t from-neon-cyan/5 to-transparent opacity-30" />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[8px] font-mono text-foreground/5 uppercase tracking-[1.5em] animate-pulse">Scanning_Neural_Grid</span>
+                        <span className="text-[8px] font-mono text-foreground/5 uppercase tracking-[1.5em] animate-pulse">{t('hero.hud.scanning')}</span>
                       </div>
                     </div>
 
@@ -119,13 +122,13 @@ export default function Home() {
                     <div className="grid grid-cols-2 gap-4 pt-4">
                       <div className="bg-foreground/5 p-3 skew-x-[-6deg] border border-border">
                         <div className="skew-x-[6deg]">
-                          <div className="text-[8px] text-foreground/30 uppercase mb-1">Active Rooms</div>
+                          <div className="text-[8px] text-foreground/30 uppercase mb-1">{t('hero.hud.active_rooms')}</div>
                           <div className="text-lg font-mono font-bold text-neon-cyan">1,284</div>
                         </div>
                       </div>
                       <div className="bg-foreground/5 p-3 skew-x-[-6deg] border border-border">
                         <div className="skew-x-[6deg]">
-                          <div className="text-[8px] text-foreground/30 uppercase mb-1">Target Wallets</div>
+                          <div className="text-[8px] text-foreground/30 uppercase mb-1">{t('hero.hud.target_wallets')}</div>
                           <div className="text-lg font-mono font-bold text-neon-purple">8.4k</div>
                         </div>
                       </div>
@@ -138,10 +141,10 @@ export default function Home() {
 
                 {/* Satellite Tags */}
                 <div className="absolute -top-10 -right-10 px-4 py-2 bg-card border border-neon-purple text-[9px] font-mono text-neon-purple shadow-neon-purple/20 rotate-12">
-                  CRYPTOGRAPHY_ACTIVE
+                  {t('hero.hud.crypto_active')}
                 </div>
                 <div className="absolute -bottom-6 -left-12 px-4 py-2 bg-card border border-neon-cyan/50 text-[9px] font-mono text-neon-cyan shadow-neon-cyan/20 -rotate-6">
-                  SIGNAL_STRENGTH: 98%
+                  {t('hero.hud.signal_strength')}: 98%
                 </div>
               </div>
             </div>
@@ -154,17 +157,17 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
           <div className="text-center mb-24">
             <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-4 italic text-foreground">
-              Surgical <span className="text-neon-cyan">Intelligence</span>
+              {t('features.title')} <span className="text-neon-cyan">{t('features.title_highlight')}</span>
             </h2>
-            <p className="text-foreground/30 font-bold uppercase tracking-[0.4em] text-[10px]">Proprietary Edge in Prediction Markets</p>
+            <p className="text-foreground/30 font-bold uppercase tracking-[0.4em] text-[10px]">{t('features.badge')}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             {[
               {
                 id: 'INTEL-01',
-                title: 'Whale Telemetry',
-                desc: 'Real-time telemetry on the world\'s most aggressive traders. Every buy, every sell, zero delay.',
+                title: t('features.telemetry.title'),
+                desc: t('features.telemetry.desc'),
                 glow: 'neon-green',
                 icon: (
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -174,8 +177,8 @@ export default function Home() {
               },
               {
                 id: 'INTEL-02',
-                title: 'Neural Aggregation',
-                desc: 'We merge chain-data with social metadata to build comprehensive profiles of the players moving markets.',
+                title: t('features.neural.title'),
+                desc: t('features.neural.desc'),
                 glow: 'neon-cyan',
                 icon: (
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -185,8 +188,8 @@ export default function Home() {
               },
               {
                 id: 'INTEL-03',
-                title: 'Wash Shield',
-                desc: 'Identifies bot manipulation and wash-trading instantly. If it\'s fake volume, you\'ll know first.',
+                title: t('features.shield.title'),
+                desc: t('features.shield.desc'),
                 glow: 'neon-purple',
                 icon: (
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -219,14 +222,14 @@ export default function Home() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[400px] bg-neon-cyan/5 blur-[120px] pointer-events-none" />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10">
           <h2 className="text-6xl md:text-8xl font-black uppercase tracking-tighter mb-12 leading-[0.85] text-foreground">
-            Access the <span className="text-neon-cyan glow-text-cyan italic">Ultimate</span> Edge.
+            {t('cta.title')} <span className="text-neon-cyan glow-text-cyan italic">{t('cta.title_highlight')}</span> {t('cta.title_suffix')}
           </h2>
           <div className="flex flex-col sm:flex-row justify-center gap-6">
             <Button size="lg" variant="primary" to="/register" className="h-20 px-16 text-xl">
-              Launch Now
+              {t('cta.button_launch')}
             </Button>
             <Button size="lg" variant="outline" to="/login" className="h-20 px-16 text-xl">
-              Operator Sync
+              {t('cta.button_sync')}
             </Button>
           </div>
         </div>

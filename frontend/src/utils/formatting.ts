@@ -22,7 +22,7 @@ export const formatDisplayName = (activity: Activity): string => {
  * Format a timestamp as a relative time string
  * @example formatTimestamp('2024-01-01T00:00:00Z') -> '2d ago'
  */
-export const formatTimestamp = (timestamp: string): string => {
+export const formatTimestamp = (timestamp: string, t?: any): string => {
   const date = new Date(timestamp);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -30,10 +30,17 @@ export const formatTimestamp = (timestamp: string): string => {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (t) {
+    if (diffMins < 1) return t('common.time.now');
+    if (diffMins < 60) return t('common.time.m_ago', { count: diffMins });
+    if (diffHours < 24) return t('common.time.h_ago', { count: diffHours });
+    if (diffDays < 7) return t('common.time.d_ago', { count: diffDays });
+  } else {
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+  }
   return date.toLocaleDateString();
 };
 

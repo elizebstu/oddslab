@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Register() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,7 +23,7 @@ export default function Register() {
       await register(email, password);
       navigate('/dashboard');
     } catch (error) {
-      setError('Registration failed. Please try again.');
+      setError(t('auth.register.error'));
     } finally {
       setLoading(false);
     }
@@ -42,27 +44,27 @@ export default function Register() {
             <span className="text-xl font-display font-black tracking-tighter text-white">ODDS<span className="text-white/40">LAB</span></span>
           </Link>
           <h1 className="text-4xl font-black uppercase tracking-tighter mb-2 italic text-white flex justify-center gap-3">
-            SIGN <span className="text-neon-purple glow-text-purple">UP</span>
+            {t('auth.register.title')} <span className="text-neon-purple glow-text-purple">{t('auth.register.title_highlight')}</span>
           </h1>
-          <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.3em]">Start Tracking Smart Money</p>
+          <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.3em]">{t('auth.register.subtitle')}</p>
         </div>
 
         <Card variant="neon-purple" className="p-8 md:p-10 border-white/10 backdrop-blur-xl bg-midnight-900/40">
           <form onSubmit={handleSubmit} className="space-y-6">
             <Input
-              label="Email Address"
+              label={t('auth.register.email_label')}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@email.com"
+              placeholder={t('auth.register.email_placeholder')}
               required
             />
             <Input
-              label="Password"
+              label={t('auth.register.pass_label')}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder={t('auth.register.pass_placeholder')}
               required
             />
 
@@ -82,15 +84,15 @@ export default function Register() {
               isLoading={loading}
               disabled={loading}
             >
-              Create Account
+              {t('auth.register.button')}
             </Button>
           </form>
 
           <div className="mt-8 pt-8 border-t border-white/5 text-center">
             <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
-              Already have an account?{' '}
+              {t('auth.register.has_account')}{' '}
               <Link to="/login" className="text-neon-purple font-black hover:text-white transition-colors">
-                Login
+                {t('auth.register.link')}
               </Link>
             </p>
           </div>

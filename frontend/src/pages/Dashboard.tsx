@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import RoomCard from '../components/RoomCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/ui/Button';
@@ -8,6 +9,7 @@ import { roomService } from '../services/roomService';
 import type { Room } from '../services/roomService';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -41,14 +43,14 @@ export default function Dashboard() {
       loadRooms();
     } catch (error) {
       console.error('Failed to create room:', error);
-      setError('Room name exists or is invalid.');
+      setError(t('dashboard.modal_error'));
     } finally {
       setCreating(false);
     }
   };
 
   const handleDeleteRoom = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this room? This cannot be undone.')) return;
+    if (!confirm(t('common.confirm_delete', { defaultValue: 'Are you sure you want to delete this room? This cannot be undone.' }))) return;
     try {
       await roomService.deleteRoom(id);
       loadRooms();
@@ -58,7 +60,7 @@ export default function Dashboard() {
   };
 
   if (loading) {
-    return <LoadingSpinner fullScreen text="Loading Dashboard..." />;
+    return <LoadingSpinner fullScreen text={t('common.loading')} />;
   }
 
   return (
@@ -67,12 +69,12 @@ export default function Dashboard() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-16 border-l-4 border-neon-cyan pl-6 py-2">
         <div className="space-y-1">
           <h1 className="text-4xl md:text-5xl font-display font-black uppercase tracking-tighter italic text-foreground">
-            DASH<span className="text-neon-cyan glow-text-cyan">BOARD</span>
+            {t('dashboard.title')}<span className="text-neon-cyan glow-text-cyan">{t('dashboard.title_highlight')}</span>
           </h1>
           <div className="flex items-center gap-4 text-foreground/30 text-[10px] font-bold uppercase tracking-[0.2em]">
-            <span>{rooms.length} Active Rooms</span>
+            <span>{rooms.length} {t('dashboard.stats_active')}</span>
             <span className="w-1 h-1 bg-foreground/10 rounded-full" />
-            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-pulse" /> Network Optimal</span>
+            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-pulse" /> {t('dashboard.stats_optimal')}</span>
           </div>
         </div>
         <Button
@@ -81,7 +83,7 @@ export default function Dashboard() {
           variant="primary"
           className="h-14 px-10"
         >
-          Create New Room
+          {t('dashboard.create_button')}
         </Button>
       </div>
 
@@ -95,12 +97,12 @@ export default function Dashboard() {
               </svg>
             </div>
           </div>
-          <h2 className="text-2xl font-black uppercase tracking-tighter mb-4 italic text-foreground/80">No Rooms Found</h2>
+          <h2 className="text-2xl font-black uppercase tracking-tighter mb-4 italic text-foreground/80">{t('dashboard.no_rooms_title')}</h2>
           <p className="text-foreground/40 max-w-sm mx-auto mb-10 text-xs font-bold uppercase tracking-widest leading-relaxed">
-            Create your first room to track whale movements and prediction market alerts.
+            {t('dashboard.no_rooms_desc')}
           </p>
           <Button onClick={() => setShowModal(true)} variant="cyber" className="px-10">
-            Create First Room
+            {t('dashboard.create_first')}
           </Button>
         </div>
       ) : (
@@ -127,7 +129,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/20 group-hover:text-foreground transition-colors">Add New Room</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/20 group-hover:text-foreground transition-colors">{t('dashboard.add_card')}</span>
             </div>
           </button>
         </div>
@@ -137,7 +139,7 @@ export default function Dashboard() {
       <Modal
         isOpen={showModal}
         onClose={() => !creating && setShowModal(false)}
-        title="Create Room"
+        title={t('dashboard.modal_title')}
         footer={
           <div className="flex gap-3 w-full">
             <Button
@@ -146,7 +148,7 @@ export default function Dashboard() {
               disabled={creating}
               className="flex-1"
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleCreateRoom}
@@ -154,20 +156,20 @@ export default function Dashboard() {
               isLoading={creating}
               className="flex-1"
             >
-              Create
+              {t('common.create')}
             </Button>
           </div>
         }
       >
         <div className="space-y-6">
           <p className="text-[11px] text-foreground/40 uppercase tracking-widest font-bold leading-relaxed">
-            Give your room a name to identify it in your dashboard.
+            {t('dashboard.modal_subtitle')}
           </p>
           <Input
-            label="Room Name"
+            label={t('dashboard.modal_label')}
             value={roomName}
             onChange={(e) => setRoomName(e.target.value)}
-            placeholder="e.g. My Whale Alerts"
+            placeholder={t('dashboard.modal_placeholder')}
             autoFocus
             disabled={creating}
             error={error}

@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useTranslate } from '../hooks/useTranslate';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -18,15 +20,22 @@ import { formatAddress, formatDisplayName, formatTimestamp, getRankBadge } from 
 type TabType = 'positions' | 'activities';
 type RefreshInterval = 0 | 60000 | 300000 | 3600000; // 0 = off, 1min, 5min, 1hour
 
-const REFRESH_OPTIONS: { value: RefreshInterval; label: string }[] = [
-  { value: 0, label: 'Off' },
-  { value: 60000, label: '1 min' },
-  { value: 300000, label: '5 min' },
-  { value: 3600000, label: '1 hour' },
-];
+function MarketTitle({ text }: { text: string }) {
+  const translated = useTranslate(text);
+  return <>{translated}</>;
+}
 
 export default function RoomDetail() {
   const { id } = useParams<{ id: string }>();
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const REFRESH_OPTIONS: { value: RefreshInterval; label: string }[] = [
+    { value: 0, label: t('common.refresh.off') },
+    { value: 60000, label: t('common.refresh.1min') },
+    { value: 300000, label: t('common.refresh.5min') },
+    { value: 3600000, label: t('common.refresh.1hour') },
+  ];
   const [room, setRoom] = useState<Room | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -40,7 +49,6 @@ export default function RoomDetail() {
   const [refreshInterval, setRefreshInterval] = useState<RefreshInterval>(0);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const navigate = useNavigate();
 
   const loadRoom = async () => {
     try {
@@ -185,7 +193,7 @@ export default function RoomDetail() {
   };
 
   if (loading) {
-    return <LoadingSpinner fullScreen text="Loading Room..." />;
+    return <LoadingSpinner fullScreen text={t('room_detail.loading')} />;
   }
 
   if (!room) {
@@ -197,10 +205,10 @@ export default function RoomDetail() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-black uppercase tracking-tighter mb-4 italic text-foreground">Room Not Found</h1>
-          <p className="text-foreground/40 mb-8 text-xs font-bold uppercase tracking-widest">This room does not exist or has been deleted.</p>
+          <h1 className="text-2xl font-black uppercase tracking-tighter mb-4 italic text-foreground">{t('room_detail.not_found')}</h1>
+          <p className="text-foreground/40 mb-8 text-xs font-bold uppercase tracking-widest">{t('room_detail.not_found_desc')}</p>
           <Button onClick={() => navigate('/dashboard')} variant="danger" className="w-full">
-            Back to Dashboard
+            {t('room_detail.back')}
           </Button>
         </Card>
       </div>
@@ -217,29 +225,28 @@ export default function RoomDetail() {
             className="group flex items-center text-[10px] font-bold text-foreground/30 hover:text-neon-cyan transition-colors uppercase tracking-widest"
           >
             <svg className="w-3 h-3 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg>
-            Back to Dashboard
+            {t('room_detail.back')}
           </button>
-
-          <div className="flex items-center gap-4">
-            <h1 className="text-4xl md:text-5xl font-display font-black uppercase tracking-tighter italic text-foreground">{room.name}</h1>
-            {room.isPublic && (
-              <div className="px-3 py-1 bg-neon-green text-midnight-950 text-[10px] font-black uppercase tracking-widest skew-x-[-6deg]">
-                <span className="skew-x-[6deg] inline-block">Public Room</span>
-              </div>
-            )}
+          <h1 className="text-5xl font-display font-black uppercase tracking-tighter italic text-foreground">
+            {room.name}
+          </h1>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-neon-green text-midnight-950 text-[10px] font-black uppercase tracking-widest skew-x-[-12deg]">
+              <span className="skew-x-[12deg]">{addresses.length} {t('room_detail.monitoring_targets')}</span>
+            </div>
+            <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest">
+              {t('room_detail.last_updated', { time: formatTimestamp(lastRefresh.toISOString(), t) })}
+            </p>
           </div>
-          <p className="text-sm font-bold text-foreground/40 uppercase tracking-widest leading-none">
-            Tracking {addresses.length || room.addresses?.length || 0} Addresses
-          </p>
         </div>
 
         <div className="flex items-center gap-4">
           <Button variant="cyber" onClick={handleToggleVisibility} className="min-w-[160px]">
-            {room.isPublic ? 'Make Private' : 'Make Public'}
+            {room.isPublic ? t('room_detail.make_private') : t('room_detail.make_public')}
           </Button>
           {room.isPublic && (
             <Button variant="primary" onClick={copyPublicLink} className="min-w-[160px]">
-              {copied ? 'Link Copied' : 'Share Link'}
+              {copied ? t('room_detail.link_copied') : t('room_detail.share_link')}
             </Button>
           )}
         </div>
@@ -250,9 +257,9 @@ export default function RoomDetail() {
         <div className="lg:col-span-4 space-y-8">
           <Card className="p-8 border-border bg-card/50">
             <div className="flex justify-between items-center mb-8">
-              <h2 className="text-xl font-black uppercase tracking-tighter italic flex items-center gap-3 text-foreground">
-                <span className="w-2 h-8 bg-neon-cyan" />
-                Addresses
+              <h2 className="text-xl font-black uppercase tracking-tighter mb-8 italic flex items-center gap-3">
+                <span className="w-2 h-8 bg-neon-cyan/20" />
+                {t('room_detail.addresses')}
               </h2>
               <span className="text-[10px] font-mono text-neon-cyan/50">{addresses.length}/50</span>
             </div>
@@ -334,11 +341,10 @@ export default function RoomDetail() {
                     <button
                       key={option.value}
                       onClick={() => setRefreshInterval(option.value)}
-                      className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all ${
-                        refreshInterval === option.value
-                          ? 'bg-neon-cyan text-midnight-950'
-                          : 'text-foreground/40 hover:text-foreground bg-muted border border-border'
-                      }`}
+                      className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all ${refreshInterval === option.value
+                        ? 'bg-neon-cyan text-midnight-950'
+                        : 'text-foreground/40 hover:text-foreground bg-muted border border-border'
+                        }`}
                     >
                       {option.label}
                     </button>
@@ -347,17 +353,17 @@ export default function RoomDetail() {
               </div>
               <div className="flex items-center gap-4">
                 {isRefreshing && (
-                  <span className="text-[10px] font-bold text-neon-cyan uppercase tracking-widest animate-pulse">Refreshing...</span>
+                  <span className="text-[10px] font-black text-neon-cyan uppercase tracking-widest animate-pulse">{t('room_detail.refreshing')}</span>
                 )}
                 <button
                   onClick={refreshData}
                   disabled={isRefreshing}
-                  className="flex items-center gap-2 text-[10px] font-bold text-foreground/30 hover:text-neon-cyan uppercase tracking-widest transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 text-[10px] font-black text-foreground/30 hover:text-neon-cyan uppercase tracking-widest transition-colors disabled:opacity-50"
                 >
                   <svg className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  Refresh Now
+                  {t('room_detail.refresh_now')}
                 </button>
               </div>
             </div>
@@ -365,21 +371,21 @@ export default function RoomDetail() {
             <div className="grid grid-cols-2 bg-muted/30 p-2 border-b border-border">
               <button
                 onClick={() => setActiveTab('positions')}
-                className={`flex items-center justify-center gap-3 py-4 text-xs font-bold uppercase tracking-widest transition-all skew-x-[-6deg] ${activeTab === 'positions'
-                  ? 'bg-neon-green text-midnight-950 shadow-neon-green/20'
-                  : 'text-foreground/40 hover:text-foreground'
+                className={`flex items-center justify-center gap-3 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all skew-x-[-12deg] ${activeTab === 'positions'
+                  ? 'bg-neon-green text-midnight-950 shadow-neon-green'
+                  : 'text-foreground/40 hover:text-foreground hover:bg-foreground/5'
                   }`}
               >
-                <span className="skew-x-[6deg]">Positions</span>
+                <span className="skew-x-[12deg]">{t('room_detail.tabs.positions')}</span>
               </button>
               <button
                 onClick={() => setActiveTab('activities')}
-                className={`flex items-center justify-center gap-3 py-4 text-xs font-bold uppercase tracking-widest transition-all skew-x-[-6deg] ${activeTab === 'activities'
-                  ? 'bg-neon-cyan text-midnight-950 shadow-neon-cyan/20'
-                  : 'text-foreground/40 hover:text-foreground'
+                className={`flex items-center justify-center gap-3 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all skew-x-[-12deg] ${activeTab === 'activities'
+                  ? 'bg-neon-cyan text-midnight-950 shadow-neon-cyan'
+                  : 'text-foreground/40 hover:text-foreground hover:bg-foreground/5'
                   }`}
               >
-                <span className="skew-x-[6deg]">Activity Feed</span>
+                <span className="skew-x-[12deg]">{t('room_detail.tabs.activity')}</span>
               </button>
             </div>
 
@@ -388,7 +394,7 @@ export default function RoomDetail() {
                 <div className="space-y-6">
                   {positions.length === 0 ? (
                     <div className="py-32 text-center">
-                      <p className="text-xl font-black text-white/20 uppercase italic tracking-tighter">No active positions found.</p>
+                      <p className="text-xl font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.no_positions')}</p>
                     </div>
                   ) : (
                     positions.map((pos, idx) => {
@@ -400,22 +406,22 @@ export default function RoomDetail() {
                               <div className="flex items-center gap-3">
                                 {badge && <span className="text-2xl">{badge.emoji}</span>}
                                 <h3 className="text-xl font-black text-foreground group-hover:text-neon-green transition-colors leading-[0.9] uppercase tracking-tighter">
-                                  {pos.market}
+                                  <MarketTitle text={pos.market} />
                                 </h3>
                               </div>
                               <div className="flex flex-wrap items-center gap-4">
-                                <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${pos.outcome.toLowerCase() === 'yes' ? 'bg-neon-green text-midnight-950' : 'bg-neon-red text-midnight-950'
+                                <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-widest ${pos.outcome.toLowerCase() === 'yes' ? 'bg-neon-green text-midnight-950' : 'bg-neon-red text-midnight-950'
                                   }`}>
-                                  {pos.outcome}
+                                  {pos.outcome.toLowerCase() === 'yes' ? t('common.yes') : t('common.no')}
                                 </span>
-                                <div className="text-[9px] font-bold text-foreground/30 tracking-widest uppercase">
-                                  <span className="text-foreground">{pos.totalShares.toLocaleString()}</span> SHARES
+                                <div className="text-[9px] font-black text-foreground/30 tracking-widest uppercase">
+                                  <span className="text-foreground">{pos.totalShares.toLocaleString()}</span> {t('room_detail.shares')}
                                 </div>
                               </div>
                               {/* Show holders */}
                               {pos.holders && pos.holders.length > 0 && (
                                 <div className="flex flex-wrap items-center gap-2 mt-3">
-                                  <span className="text-[9px] font-bold text-foreground/30 uppercase tracking-widest">HELD BY:</span>
+                                  <span className="text-[9px] font-black text-foreground/30 uppercase tracking-widest">{t('room_detail.held_by')}</span>
                                   {pos.holders.map((holder, hIdx) => (
                                     <span
                                       key={hIdx}
@@ -451,7 +457,9 @@ export default function RoomDetail() {
 
                   <div className="space-y-4 font-mono">
                     {activities.length === 0 ? (
-                      <p className="text-center py-20 text-foreground/20 uppercase font-bold tracking-widest italic">No activity found.</p>
+                      <div className="py-24 text-center">
+                        <p className="text-xl font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.no_activity')}</p>
+                      </div>
                     ) : (
                       activities.map((act, idx) => {
                         const isBuy = act.type === 'buy';
@@ -473,18 +481,22 @@ export default function RoomDetail() {
                                   </div>
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="text-sm font-bold text-foreground mb-1 uppercase tracking-tight truncate group-hover:text-neon-cyan transition-colors">{act.market}</p>
-                                  <div className="flex items-center gap-3 text-[9px] font-bold text-foreground/30 uppercase tracking-[0.1em]">
-                                    <span className="text-neon-cyan">{formatDisplayName(act)}</span>
-                                    <span className="text-foreground/10">•</span>
-                                    <span className={isBuy ? 'text-neon-green' : isSell ? 'text-neon-red' : ''}>{act.type}</span>
-                                    <span className="text-foreground/10">•</span>
+                                  <p className="text-xs font-black text-foreground mb-1 uppercase tracking-tighter truncate">
+                                    <MarketTitle text={act.market} />
+                                  </p>
+                                  <div className="flex items-center gap-3 text-[9px] font-black text-foreground/30 uppercase tracking-[0.2em]">
+                                    <span className="text-foreground/60">{formatDisplayName(act)}</span>
+                                    <span className="text-white/10">•</span>
+                                    <span className={isBuy ? 'text-neon-green' : isSell ? 'text-neon-red' : ''}>
+                                      {isBuy ? t('room_detail.type_buy') : isSell ? t('room_detail.type_sell') : act.type}
+                                    </span>
+                                    <span className="text-white/10">•</span>
                                     <span className="text-foreground">${act.amount.toLocaleString()}</span>
                                   </div>
                                 </div>
                               </div>
-                              <div className="text-[9px] font-bold text-foreground/20 whitespace-nowrap">
-                                {formatTimestamp(act.timestamp)}
+                              <div className="text-[10px] font-bold text-foreground/20 uppercase tracking-widest pt-1">
+                                {formatTimestamp(act.timestamp, t)}
                               </div>
                             </div>
                           </div>

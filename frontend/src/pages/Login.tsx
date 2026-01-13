@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Login() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,7 +23,7 @@ export default function Login() {
       await login(email, password);
       navigate('/dashboard');
     } catch (error) {
-      setError('Invalid email or password.');
+      setError(t('auth.login.error'));
     } finally {
       setLoading(false);
     }
@@ -42,27 +44,27 @@ export default function Login() {
             <span className="text-xl font-display font-black tracking-tighter text-white">ODDS<span className="text-white/40">LAB</span></span>
           </Link>
           <h1 className="text-4xl font-black uppercase tracking-tighter mb-2 italic text-white flex justify-center gap-3">
-            LOG<span className="text-neon-cyan glow-text-cyan">IN</span>
+            {t('auth.login.title')}<span className="text-neon-cyan glow-text-cyan">{t('auth.login.title_highlight')}</span>
           </h1>
-          <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.3em]">Access Your Whale Intelligence</p>
+          <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.3em]">{t('auth.login.subtitle')}</p>
         </div>
 
         <Card variant="neon-cyan" className="p-8 md:p-10 border-white/10 backdrop-blur-xl bg-midnight-900/40">
           <form onSubmit={handleSubmit} className="space-y-6">
             <Input
-              label="Email Address"
+              label={t('auth.login.email_label')}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@email.com"
+              placeholder={t('auth.login.email_placeholder')}
               required
             />
             <Input
-              label="Password"
+              label={t('auth.login.pass_label')}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder={t('auth.login.pass_placeholder')}
               required
             />
 
@@ -82,15 +84,15 @@ export default function Login() {
               isLoading={loading}
               disabled={loading}
             >
-              Login
+              {t('auth.login.button')}
             </Button>
           </form>
 
           <div className="mt-8 pt-8 border-t border-white/5 text-center">
             <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
-              New to Oddslab?{' '}
+              {t('auth.login.no_account')}{' '}
               <Link to="/register" className="text-neon-cyan font-black hover:text-white transition-colors">
-                Sign Up
+                {t('auth.login.link')}
               </Link>
             </p>
           </div>

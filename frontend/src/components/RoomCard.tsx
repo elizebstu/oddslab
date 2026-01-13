@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useTranslate } from '../hooks/useTranslate';
 import type { Room } from '../services/roomService';
 import Card from './ui/Card';
 import Button from './ui/Button';
@@ -11,6 +13,7 @@ interface RoomCardProps {
 }
 
 export default function RoomCard({ room, variant = 'default', showActions = false, onDelete }: RoomCardProps) {
+  const { t } = useTranslation();
   const linkPath = showActions ? `/rooms/${room.id}` : `/public/${room.id}`;
 
   if (variant === 'compact') {
@@ -28,7 +31,7 @@ export default function RoomCard({ room, variant = 'default', showActions = fals
             <div>
               <h3 className="font-bold text-white group-hover:text-neon-cyan transition-colors uppercase tracking-tight italic">{room.name}</h3>
               <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest mt-0.5">
-                {room.addresses?.length || 0} ADDRESSES
+                {t('explore.addresses_count', { count: room.addresses?.length || 0 })}
               </p>
             </div>
           </div>
@@ -47,7 +50,7 @@ export default function RoomCard({ room, variant = 'default', showActions = fals
           <h3 className="text-2xl font-black text-white hover:text-neon-cyan transition-colors mb-2 italic uppercase tracking-tighter leading-none">{room.name}</h3>
           {(room.isPublic || (room as any).public) && (
             <div className="inline-flex items-center gap-2 px-2 py-0.5 bg-neon-green text-midnight-950 text-[9px] font-bold uppercase tracking-widest skew-x-[-6deg]">
-              <span className="skew-x-[6deg]">Public</span>
+              <span className="skew-x-[6deg]">{t('room_detail.public_badge')}</span>
             </div>
           )}
         </div>
@@ -66,13 +69,13 @@ export default function RoomCard({ room, variant = 'default', showActions = fals
             <div key={i} className="w-4 h-4 bg-midnight-800 border border-white/10 skew-x-[-6deg]" />
           ))}
         </div>
-        <span>{room.addresses?.length || 0} Addresses Tracked</span>
+        <span>{t('explore.addresses_count', { count: room.addresses?.length || 0 })}</span>
       </div>
 
       <div className="flex gap-4">
         <Link to={linkPath} className="flex-1">
           <Button variant="cyber" className="w-full text-[10px] h-10">
-            View Room
+            {t('explore.view_room')}
           </Button>
         </Link>
         {showActions && onDelete && (
