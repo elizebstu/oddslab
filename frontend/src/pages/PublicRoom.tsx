@@ -26,6 +26,21 @@ function MarketTitle({ text }: { text: string }) {
 type Tab = 'positions' | 'activity';
 const AUTO_REFRESH_INTERVAL = 120000; // 2 minutes
 
+// Helper to get blocked addresses from localStorage
+const getBlockedAddresses = (roomId: string): Set<string> => {
+  try {
+    const stored = localStorage.getItem(`blocked_addresses_${roomId}`);
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+// Helper to save blocked addresses to localStorage
+const saveBlockedAddresses = (roomId: string, blocked: Set<string>) => {
+  localStorage.setItem(`blocked_addresses_${roomId}`, JSON.stringify([...blocked]));
+};
+
 export default function PublicRoom() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
@@ -39,6 +54,9 @@ export default function PublicRoom() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showWallets, setShowWallets] = useState(false);
+  const [minVolume, setMinVolume] = useState<string>('');
+  const [maxVolume, setMaxVolume] = useState<string>('');
+  const [blockedAddresses, setBlockedAddresses] = useState<Set<string>>(new Set());
   const refreshTimerRef = useRef<number | null>(null);
   const walletsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -53,6 +71,13 @@ export default function PublicRoom() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Load blocked addresses from localStorage
+  useEffect(() => {
+    if (id) {
+      setBlockedAddresses(getBlockedAddresses(id));
+    }
+  }, [id]);
 
   const loadRoom = async () => {
     try {
@@ -331,7 +356,7 @@ export default function PublicRoom() {
               </button>
             </div>
 
-            <div className="p-8">
+            <div className="p-8 min-h-[400px]">
               {activeTab === 'positions' ? (
                 <div className="space-y-6">
                   {positions.length === 0 ? (
@@ -341,6 +366,7 @@ export default function PublicRoom() {
                   ) : (
                     positions.map((pos, idx) => {
                       const badge = getRankBadge(idx);
+                      const polymarketUrl = `https://polymarket.com/search?query=${encodeURIComponent(pos.market)}`;
                       return (
                         <div key={idx} className="group relative p-8 bg-midnight-950 border border-white/5 hover:border-neon-green/50 transition-all">
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
@@ -350,6 +376,18 @@ export default function PublicRoom() {
                                 <h3 className="text-xl font-black text-white group-hover:text-neon-green transition-colors leading-[0.9] uppercase tracking-tighter">
                                   <MarketTitle text={pos.market} />
                                 </h3>
+                                {/* Polymarket link button */}
+                                <a
+                                  href={polymarketUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 text-white/20 hover:text-neon-cyan transition-all opacity-0 group-hover:opacity-100"
+                                  title={t('room_detail.view_on_polymarket', { defaultValue: 'View on Polymarket' })}
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                </a>
                               </div>
                               <div className="flex items-center gap-4">
                                 <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${pos.outcome.toLowerCase() === 'yes' ? 'bg-neon-green/20 text-neon-green border border-neon-green/30' : 'bg-neon-red/20 text-neon-red border border-neon-red/30'
@@ -389,14 +427,44 @@ export default function PublicRoom() {
                 </div>
               ) : (
                 <div className="space-y-6 font-mono">
+                  {/* Filter controls */}
+                  <div className="flex items-center gap-4 mb-4 p-4 bg-midnight-950/50 border border-white/5">
+                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{t('room_detail.filter_amount', { defaultValue: 'Filter Amount' })}:</span>
+                    <input
+                      type="number"
+                      placeholder={t('room_detail.min_amount', { defaultValue: 'Min' })}
+                      value={minVolume}
+                      onChange={(e) => setMinVolume(e.target.value)}
+                      className="w-24 px-3 py-1.5 bg-midnight-800 border border-white/10 text-white text-[11px] font-mono placeholder:text-white/20 focus:border-neon-cyan outline-none"
+                    />
+                    <span className="text-white/20">-</span>
+                    <input
+                      type="number"
+                      placeholder={t('room_detail.max_amount', { defaultValue: 'Max' })}
+                      value={maxVolume}
+                      onChange={(e) => setMaxVolume(e.target.value)}
+                      className="w-24 px-3 py-1.5 bg-midnight-800 border border-white/10 text-white text-[11px] font-mono placeholder:text-white/20 focus:border-neon-cyan outline-none"
+                    />
+                    <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">USD</span>
+                  </div>
+
                   {activities.length === 0 ? (
                     <div className="py-24 text-center">
                       <p className="text-lg font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.stream_static')}</p>
                     </div>
                   ) : (
-                    activities.map((act, idx) => {
+                    activities
+                      .filter((act) => {
+                        const min = minVolume ? parseFloat(minVolume) : 0;
+                        const max = maxVolume ? parseFloat(maxVolume) : Infinity;
+                        return act.amount >= min && act.amount <= max;
+                      })
+                      .filter((act) => !blockedAddresses.has(act.address.toLowerCase()))
+                      .map((act, idx) => {
                       const isBuy = act.type === 'buy';
                       const isSell = act.type === 'sell';
+                      const polymarketUrl = `https://polymarket.com/search?query=${encodeURIComponent(act.market)}`;
+                      const polygonscanUrl = act.transactionHash ? `https://polygonscan.com/tx/${act.transactionHash}` : null;
                       return (
                         <div key={idx} className="relative p-5 bg-midnight-950 border border-white/5 hover:border-white/10 group transition-all">
                           <div className="flex items-center justify-between gap-6">
@@ -413,16 +481,51 @@ export default function PublicRoom() {
                                   )}
                                 </div>
                               </div>
-                              <div className="min-w-0">
-                                <p className="text-xs font-black text-white mb-1 uppercase tracking-tighter truncate">
-                                  <MarketTitle text={act.market} />
-                                </p>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-xs font-black text-white mb-1 uppercase tracking-tighter truncate">
+                                    <MarketTitle text={act.market} />
+                                  </p>
+                                  {/* Links */}
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                                    <a
+                                      href={polymarketUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-1 text-white/20 hover:text-neon-cyan transition-all"
+                                      title={t('room_detail.view_on_polymarket', { defaultValue: 'View on Polymarket' })}
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                      </svg>
+                                    </a>
+                                    {polygonscanUrl && (
+                                      <a
+                                        href={polygonscanUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-1 text-white/20 hover:text-neon-purple transition-all"
+                                        title={t('room_detail.view_transaction', { defaultValue: 'View Transaction' })}
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                        </svg>
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
                                 <div className="flex items-center gap-3 text-[8px] font-bold text-white/30 uppercase tracking-[0.2em]">
                                   <span className="text-white/60">{formatDisplayName(act)}</span>
                                   <span className="text-white/20">•</span>
                                   <span className={isBuy ? 'text-neon-green' : isSell ? 'text-neon-red' : ''}>
                                     {isBuy ? t('room_detail.type_buy') : isSell ? t('room_detail.type_sell') : act.type}
                                   </span>
+                                  {act.outcome && (
+                                    <>
+                                      <span className="text-white/20">•</span>
+                                      <span className="text-neon-cyan">{act.outcome}</span>
+                                    </>
+                                  )}
                                   <span className="text-white/20">•</span>
                                   <span className="text-white">${act.amount.toLocaleString()}</span>
                                 </div>
@@ -439,7 +542,6 @@ export default function PublicRoom() {
               )}
             </div>
           </Card>
-        </div>
       </div>
     </div>
   );

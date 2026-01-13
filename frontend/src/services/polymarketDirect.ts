@@ -53,6 +53,7 @@ export interface Position {
   totalValue: number;
   totalShares: number;
   holders: PositionHolder[];
+  conditionId?: string;
 }
 
 // Cache for profile names learned from activities
@@ -126,6 +127,7 @@ export const fetchPositionsFromPolymarket = async (addresses: string[]): Promise
     totalValue: number;
     totalShares: number;
     holders: Map<string, PositionHolder>;
+    conditionId: string;
   }>();
 
   for (const address of addresses) {
@@ -168,6 +170,7 @@ export const fetchPositionsFromPolymarket = async (addresses: string[]): Promise
               totalValue: currentValue,
               totalShares: position.size,
               holders,
+              conditionId: position.conditionId,
             });
           }
         }
@@ -184,6 +187,7 @@ export const fetchPositionsFromPolymarket = async (addresses: string[]): Promise
       totalValue: pos.totalValue,
       totalShares: pos.totalShares,
       holders: Array.from(pos.holders.values()),
+      conditionId: pos.conditionId,
     }))
     .sort((a, b) => b.totalValue - a.totalValue);
 };
