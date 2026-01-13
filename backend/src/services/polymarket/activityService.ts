@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { CacheMap } from './cache';
 import { POLYMARKET_DATA_API, CACHE_TTL } from './constants';
-import { fetchProfilesSequentially } from './profileService';
+import { updateProfileFromActivity, getProfileDisplayName } from './profileCache';
 import type { Activity, PolymarketActivity } from './types';
 
 // Cache for activities
@@ -9,6 +9,7 @@ const activityCache = new CacheMap<Activity[]>(CACHE_TTL);
 
 /**
  * Fetch trading activities for addresses using Polymarket Data API
+ * Profile info is extracted directly from the activity response (name, pseudonym fields)
  */
 export const fetchPolymarketActivities = async (addresses: string[]): Promise<Activity[]> => {
   const cacheKey = addresses.sort().join(',');
@@ -21,16 +22,6 @@ export const fetchPolymarketActivities = async (addresses: string[]): Promise<Ac
   try {
     const allActivities: Activity[] = [];
     const oneDayAgo = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
-
-    // Fetch user profiles sequentially to avoid rate limiting
-    const profileResults = await fetchProfilesSequentially(addresses);
-    const profileMap = new Map<string, string | undefined>();
-    for (const [addr, profile] of profileResults) {
-      const displayName = profile?.name || profile?.username;
-      if (displayName) {
-        profileMap.set(addr.toLowerCase(), displayName);
-      }
-    }
 
     for (const address of addresses) {
       try {
@@ -71,13 +62,22 @@ export const fetchPolymarketActivities = async (addresses: string[]): Promise<Ac
               type = 'buy'; // fallback
             }
 
+            // Extract profile info directly from activity response
+            // The Data API includes name and pseudonym in the activity data
+            const displayName = activity.name || activity.pseudonym;
+
+            // Update shared profile cache for use by positions
+            if (displayName) {
+              updateProfileFromActivity(address, displayName);
+            }
+
             return {
               address,
               type,
               market: activity.title || activity.conditionId,
               amount: Math.round(activity.usdcSize * 100) / 100, // Use usdcSize directly
               timestamp: new Date(activity.timestamp * 1000).toISOString(),
-              userName: profileMap.get(address.toLowerCase()),
+              userName: displayName,
               outcome: activity.outcome,
               icon: activity.icon,
               transactionHash: activity.transactionHash,

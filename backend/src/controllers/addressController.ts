@@ -2,7 +2,8 @@ import { Response } from 'express';
 import prisma from '../db/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { isValidEthereumAddress } from '../utils/validation';
-import { resolveUsernameToAddress, checkIfBot, fetchProfilesSequentially } from '../services/polymarketService';
+import { resolveUsernameToAddress, checkIfBot } from '../services/polymarketService';
+import { fetchProfilesFromActivities, setProfile } from '../services/polymarket/profileCache';
 
 function isUsername(input: string): boolean {
   const trimmed = input.trim();
@@ -164,9 +165,9 @@ export const getAddressProfiles = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Fetch profiles sequentially to avoid rate limiting
+    // Fetch profiles using Data API activity endpoint (avoids Gamma API ECONNRESET errors)
     const addressList = room.addresses.map(a => a.address);
-    const profileMap = await fetchProfilesSequentially(addressList);
+    const profileMap = await fetchProfilesFromActivities(addressList);
 
     const addressesWithProfiles = room.addresses.map((addr) => {
       const profile = profileMap.get(addr.address.toLowerCase());

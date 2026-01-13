@@ -11,6 +11,11 @@ export const addressService = {
     await api.delete(`/addresses/${roomId}/addresses/${addressId}`);
   },
 
+  getAddresses: async (roomId: string): Promise<Address[]> => {
+    const response = await api.get(`/addresses/${roomId}/addresses`);
+    return response.data;
+  },
+
   getAddressProfiles: async (roomId: string): Promise<Address[]> => {
     const response = await api.get(`/addresses/${roomId}/profiles`);
     return response.data;

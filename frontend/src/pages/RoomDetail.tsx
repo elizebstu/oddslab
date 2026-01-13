@@ -5,8 +5,14 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { roomService } from '../services/roomService';
 import { addressService } from '../services/addressService';
-import { activityService } from '../services/activityService';
-import type { Room, Activity, Position, Address } from '../services/roomService';
+import {
+  fetchActivitiesFromPolymarket,
+  fetchPositionsFromPolymarket,
+  fetchProfileNames,
+  type Activity,
+  type Position
+} from '../services/polymarketDirect';
+import type { Room, Address } from '../services/roomService';
 import { formatAddress, formatDisplayName, formatTimestamp, getRankBadge } from '../utils/formatting';
 
 type TabType = 'positions' | 'activities';
@@ -49,8 +55,20 @@ export default function RoomDetail() {
 
   const loadAddressProfiles = async () => {
     try {
-      const data = await addressService.getAddressProfiles(id!);
-      setAddresses(data);
+      // First get addresses from our backend
+      const data = await addressService.getAddresses(id!);
+
+      // Then fetch profile names directly from Polymarket
+      const addressList = data.map((a: Address) => a.address);
+      const profileNames = await fetchProfileNames(addressList);
+
+      // Merge profile names with address data
+      const addressesWithProfiles = data.map((addr: Address) => ({
+        ...addr,
+        userName: profileNames.get(addr.address.toLowerCase()) || null,
+      }));
+
+      setAddresses(addressesWithProfiles);
     } catch (error) {
       console.error('Failed to load address profiles:', error);
     }
@@ -58,7 +76,13 @@ export default function RoomDetail() {
 
   const loadActivities = async () => {
     try {
-      const data = await activityService.getActivities(id!);
+      // Get addresses first
+      const addressList = addresses.length > 0
+        ? addresses.map(a => a.address)
+        : (await addressService.getAddresses(id!)).map((a: Address) => a.address);
+
+      // Fetch activities directly from Polymarket
+      const data = await fetchActivitiesFromPolymarket(addressList);
       setActivities(data);
     } catch (error) {
       console.error('Failed to load activities:', error);
@@ -67,7 +91,13 @@ export default function RoomDetail() {
 
   const loadPositions = async () => {
     try {
-      const data = await activityService.getPositions(id!);
+      // Get addresses first
+      const addressList = addresses.length > 0
+        ? addresses.map(a => a.address)
+        : (await addressService.getAddresses(id!)).map((a: Address) => a.address);
+
+      // Fetch positions directly from Polymarket
+      const data = await fetchPositionsFromPolymarket(addressList);
       setPositions(data);
     } catch (error) {
       console.error('Failed to load positions:', error);

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { CacheMap } from './cache';
 import { POLYMARKET_DATA_API, CACHE_TTL } from './constants';
-import { fetchProfilesSequentially } from './profileService';
+import { getProfileDisplayName } from './profileCache';
 import type { Position, PositionHolder, PolymarketPosition } from './types';
 
 // Cache for aggregated positions
@@ -22,6 +22,7 @@ interface PositionData {
 /**
  * Fetch positions for addresses
  * Returns aggregated positions by market with holder information
+ * Uses shared profile cache (populated from activities) for user names
  */
 export const fetchPolymarketPositions = async (
   addresses: string[]
@@ -36,16 +37,6 @@ export const fetchPolymarketPositions = async (
   try {
     const allPositions = new Map<string, PositionData>();
 
-    // Fetch profiles sequentially to avoid rate limiting
-    const profileResults = await fetchProfilesSequentially(addresses);
-    const profileMap = new Map<string, string | undefined>();
-    for (const [addr, profile] of profileResults) {
-      const displayName = profile?.name || profile?.username;
-      if (displayName) {
-        profileMap.set(addr.toLowerCase(), displayName);
-      }
-    }
-
     for (const address of addresses) {
       try {
         const response = await axios.get<PolymarketPosition[]>(`${POLYMARKET_DATA_API}/positions`, {
@@ -59,7 +50,8 @@ export const fetchPolymarketPositions = async (
           for (const position of response.data) {
             const marketKey = `${position.conditionId}_${position.outcome}`;
             const currentValue = position.currentValue || 0;
-            const userName = profileMap.get(address.toLowerCase());
+            // Get user name from shared profile cache (populated from activities)
+            const userName = getProfileDisplayName(address);
 
             if (allPositions.has(marketKey)) {
               const existing = allPositions.get(marketKey)!;

@@ -9,6 +9,8 @@ export {
   checkIfBot,
   fetchPolymarketPositions,
   fetchPolymarketActivities,
+  fetchProfilesFromActivities,
+  setProfile,
 } from './polymarket';
 
 export type { Activity, Position } from './polymarket';
