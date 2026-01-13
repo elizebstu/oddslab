@@ -2,7 +2,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../ui/Button';
-import ThemeToggle from '../ui/ThemeToggle';
 import LanguageToggle from '../ui/LanguageToggle';
 
 
@@ -52,7 +51,6 @@ export default function Navbar() {
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-3">
                             <LanguageToggle />
-                            <ThemeToggle />
                         </div>
                         {user ? (
                             <>

@@ -6,16 +6,6 @@
 
 @layer base {
   :root {
-    --background: #ffffff;
-    --foreground: #020202;
-    --card: #f8fafc;
-    --card-foreground: #020202;
-    --border: #e2e8f0;
-    --muted: #f1f5f9;
-    --muted-foreground: #64748b;
-  }
-
-  .dark {
     --background: #020202;
     --foreground: #ffffff;
     --card: #0a0a0c;
