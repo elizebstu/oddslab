@@ -1,6 +1,10 @@
 import axios from 'axios';
 
 const POLYMARKET_DATA_API = 'https://data-api.polymarket.com';
+const GAMMA_API = 'https://gamma-api.polymarket.com';
+
+// Cache for market slugs by conditionId
+const marketSlugCache = new Map<string, string>();
 
 export interface PolymarketActivity {
   name?: string;
@@ -14,6 +18,8 @@ export interface PolymarketActivity {
   usdcSize: number;
   icon?: string;
   transactionHash: string;
+  conditionId?: string;
+  slug?: string;
 }
 
 export interface PolymarketPosition {
@@ -38,6 +44,8 @@ export interface Activity {
   outcome?: string;
   icon?: string;
   transactionHash?: string;
+  conditionId?: string;
+  marketSlug?: string;
 }
 
 export interface PositionHolder {
@@ -53,6 +61,8 @@ export interface Position {
   totalValue: number;
   totalShares: number;
   holders: PositionHolder[];
+  conditionId?: string;
+  marketSlug?: string;
 }
 
 // Cache for profile names learned from activities
@@ -126,6 +136,7 @@ export const fetchPositionsFromPolymarket = async (addresses: string[]): Promise
     totalValue: number;
     totalShares: number;
     holders: Map<string, PositionHolder>;
+    conditionId: string;
   }>();
 
   for (const address of addresses) {
@@ -168,6 +179,7 @@ export const fetchPositionsFromPolymarket = async (addresses: string[]): Promise
               totalValue: currentValue,
               totalShares: position.size,
               holders,
+              conditionId: position.conditionId,
             });
           }
         }
@@ -177,6 +189,10 @@ export const fetchPositionsFromPolymarket = async (addresses: string[]): Promise
     }
   }
 
+  // Get unique conditionIds and fetch their slugs
+  const conditionIds = [...new Set(Array.from(allPositions.values()).map(p => p.conditionId))];
+  const slugs = await fetchMarketSlugs(conditionIds);
+
   return Array.from(allPositions.values())
     .map((pos) => ({
       market: pos.market,
@@ -184,6 +200,8 @@ export const fetchPositionsFromPolymarket = async (addresses: string[]): Promise
       totalValue: pos.totalValue,
       totalShares: pos.totalShares,
       holders: Array.from(pos.holders.values()),
+      conditionId: pos.conditionId,
+      marketSlug: slugs.get(pos.conditionId),
     }))
     .sort((a, b) => b.totalValue - a.totalValue);
 };
@@ -235,6 +253,74 @@ export const fetchProfileNames = async (addresses: string[]): Promise<Map<string
     if (name) {
       results.set(address.toLowerCase(), name);
     }
+  }
+
+  return results;
+};
+
+/**
+ * Fetch market slug from Gamma API by conditionId
+ */
+export const fetchMarketSlug = async (conditionId: string): Promise<string | undefined> => {
+  // Check cache first
+  const cached = marketSlugCache.get(conditionId);
+  if (cached) return cached;
+
+  try {
+    const response = await axios.get(`${GAMMA_API}/markets`, {
+      params: { condition_id: conditionId },
+      timeout: 10000,
+    });
+
+    if (response.data && response.data.length > 0) {
+      const market = response.data[0];
+      // Construct the full URL path: /event/{event-slug}/{market-slug} or just /event/{event-slug}
+      const slug = market.slug || market.market_slug;
+      const eventSlug = market.event_slug || market.eventSlug;
+
+      let fullSlug: string | undefined;
+      if (eventSlug) {
+        fullSlug = slug ? `${eventSlug}/${slug}` : eventSlug;
+      } else if (slug) {
+        fullSlug = slug;
+      }
+
+      if (fullSlug) {
+        marketSlugCache.set(conditionId, fullSlug);
+        return fullSlug;
+      }
+    }
+  } catch (error) {
+    console.error(`Error fetching market slug for ${conditionId}:`, error);
+  }
+  return undefined;
+};
+
+/**
+ * Fetch market slugs for multiple conditionIds in batch
+ */
+export const fetchMarketSlugs = async (conditionIds: string[]): Promise<Map<string, string>> => {
+  const results = new Map<string, string>();
+  const uncachedIds = conditionIds.filter(id => !marketSlugCache.has(id));
+
+  // Return cached results for already known IDs
+  for (const id of conditionIds) {
+    const cached = marketSlugCache.get(id);
+    if (cached) {
+      results.set(id, cached);
+    }
+  }
+
+  // Fetch uncached IDs (limit concurrent requests)
+  const batchSize = 5;
+  for (let i = 0; i < uncachedIds.length; i += batchSize) {
+    const batch = uncachedIds.slice(i, i + batchSize);
+    await Promise.all(batch.map(async (conditionId) => {
+      const slug = await fetchMarketSlug(conditionId);
+      if (slug) {
+        results.set(conditionId, slug);
+      }
+    }));
   }
 
   return results;

@@ -3,9 +3,10 @@
         "explore": "探索",
         "dashboard": "控制台",
         "login": "登录",
-        "register": "注册",
+        "register": "加入",
         "logout": "退出",
-        "account": "账户"
+        "account": "账户",
+        "feed": "看板"
     },
     "hero": {
         "badge": "公共网络",
@@ -57,6 +58,10 @@
     "dashboard": {
         "title": "控制",
         "title_highlight": "台",
+        "tabs": {
+            "rooms": "监控方案",
+            "feed": "看板"
+        },
         "stats_active": "活跃房间",
         "stats_optimal": "网络处于最佳状态",
         "create_button": "创建新房间",
@@ -134,9 +139,20 @@
         "monitoring_targets_public": "正在监控 {{count}} 个开放目标",
         "locked_title": "频道已锁定",
         "locked_desc": "该数据流为私有或已中断。加入网络以获取完整访问权限。",
-        "grid_archive": "网格存档",
+        "grid_archive": "返回探索",
+        "join": "加入",
         "type_buy": "买入",
         "type_sell": "卖出",
+        "data_sources": "数据来源",
+        "blocked": "已屏蔽",
+        "block_address": "屏蔽地址",
+        "unblock_address": "取消屏蔽",
+        "filter_amount": "金额筛选",
+        "min_amount": "最小",
+        "max_amount": "最大",
+        "clear_filter": "清除",
+        "view_on_polymarket": "在 Polymarket 查看",
+        "view_transaction": "查看交易",
         "not_found_error": {
             "title": "终端连接已断开",
             "desc": "所请求的房间不存在或访问权限已被撤销。",
