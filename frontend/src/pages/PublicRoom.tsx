@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTranslate } from '../hooks/useTranslate';
+import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -41,9 +42,119 @@ const saveBlockedAddresses = (roomId: string, blocked: Set<string>) => {
   localStorage.setItem(`blocked_addresses_${roomId}`, JSON.stringify([...blocked]));
 };
 
+// Helper to get joined rooms from localStorage
+const getJoinedRooms = (): Set<string> => {
+  try {
+    const stored = localStorage.getItem('joined_rooms');
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+// Helper to save joined rooms to localStorage
+const saveJoinedRooms = (joined: Set<string>) => {
+  localStorage.setItem('joined_rooms', JSON.stringify([...joined]));
+};
+
+interface ActivityGroup {
+  key: string;
+  activities: Activity[];
+  latestActivity: Activity;
+  totalBuyAmount: number;
+  totalSellAmount: number;
+  buyCount: number;
+  sellCount: number;
+  positionValue: number | null;
+  profitLoss: number | null;
+}
+
+function groupActivities(activities: Activity[], positions: Position[]): ActivityGroup[] {
+  const groupMap = new Map<string, Activity[]>();
+
+  // Group by address + market name (normalized)
+  for (const activity of activities) {
+    const marketKey = activity.market.trim().toLowerCase();
+    const key = `${activity.address.toLowerCase()}-${marketKey}`;
+    const existing = groupMap.get(key) || [];
+    existing.push(activity);
+    groupMap.set(key, existing);
+  }
+
+  // Build a lookup map for positions: marketName (lowercase) -> Position
+  const positionMap = new Map<string, Position>();
+  for (const pos of positions) {
+    const marketKey = pos.market.trim().toLowerCase();
+    positionMap.set(marketKey, pos);
+  }
+
+  // Convert to ActivityGroup array
+  const groups: ActivityGroup[] = [];
+  for (const [key, acts] of groupMap) {
+    // Sort by timestamp descending (newest first)
+    const sorted = [...acts].sort((a, b) =>
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    let totalBuyAmount = 0;
+    let totalSellAmount = 0;
+    let buyCount = 0;
+    let sellCount = 0;
+
+    for (const act of sorted) {
+      if (act.type === 'buy') {
+        totalBuyAmount += act.amount;
+        buyCount++;
+      } else if (act.type === 'sell') {
+        totalSellAmount += act.amount;
+        sellCount++;
+      }
+    }
+
+    // Find matching position value
+    const address = sorted[0].address.toLowerCase();
+    const marketKey = sorted[0].market.trim().toLowerCase();
+    const position = positionMap.get(marketKey);
+    let positionValue: number | null = null;
+    let profitLoss: number | null = null;
+
+    if (position) {
+      const holder = position.holders?.find(h => h.address.toLowerCase() === address);
+      if (holder) {
+        positionValue = holder.value;
+        profitLoss = positionValue + totalSellAmount - totalBuyAmount;
+      } else {
+        // No position found for this address - might have sold everything
+        profitLoss = totalSellAmount - totalBuyAmount;
+        positionValue = 0;
+      }
+    }
+
+    groups.push({
+      key,
+      activities: sorted,
+      latestActivity: sorted[0],
+      totalBuyAmount,
+      totalSellAmount,
+      buyCount,
+      sellCount,
+      positionValue,
+      profitLoss,
+    });
+  }
+
+  // Sort groups by latest activity timestamp
+  groups.sort((a, b) =>
+    new Date(b.latestActivity.timestamp).getTime() - new Date(a.latestActivity.timestamp).getTime()
+  );
+
+  return groups;
+}
+
 export default function PublicRoom() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [room, setRoom] = useState<Room | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -57,9 +168,26 @@ export default function PublicRoom() {
   const [minVolume, setMinVolume] = useState<string>('');
   const [maxVolume, setMaxVolume] = useState<string>('');
   const [blockedAddresses, setBlockedAddresses] = useState<Set<string>>(new Set());
+  const [hasJoined, setHasJoined] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const refreshTimerRef = useRef<number | null>(null);
   const walletsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  const toggleGroupExpanded = (key: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  // Check if current user is the owner
+  const isOwner = user && room && user.id === room.userId;
 
   // Close wallets panel when clicking outside
   useEffect(() => {
@@ -72,12 +200,21 @@ export default function PublicRoom() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Load blocked addresses from localStorage
+  // Load blocked addresses and joined status from localStorage
   useEffect(() => {
     if (id) {
       setBlockedAddresses(getBlockedAddresses(id));
+      setHasJoined(getJoinedRooms().has(id));
     }
   }, [id]);
+
+  const handleJoinRoom = () => {
+    if (!id) return;
+    const joinedRooms = getJoinedRooms();
+    joinedRooms.add(id);
+    saveJoinedRooms(joinedRooms);
+    setHasJoined(true);
+  };
 
   const toggleBlockAddress = (address: string) => {
     if (!id) return;
@@ -329,13 +466,13 @@ export default function PublicRoom() {
                           </button>
                           <button
                             onClick={() => toggleBlockAddress(addr.address)}
-                            className={`p-1.5 transition-all ${isBlocked ? 'text-neon-green hover:text-neon-green' : 'text-white/20 hover:text-neon-red'}`}
+                            className={`p-1.5 transition-all ${isBlocked ? 'text-neon-red hover:text-neon-green' : 'text-white/20 hover:text-neon-red'}`}
                             title={isBlocked ? t('room_detail.unblock_address') : t('room_detail.block_address')}
                           >
                             {isBlocked ? (
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                            ) : (
                               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                            ) : (
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                             )}
                           </button>
                         </div>
@@ -346,9 +483,23 @@ export default function PublicRoom() {
               )}
             </div>
 
-            <Button variant="primary" onClick={() => navigate('/register')} className="min-w-[160px] shadow-neon-green">
-              {t('nav.register')}
-            </Button>
+            {/* Join/Owner/Joined Button */}
+            {isOwner ? (
+              <Button variant="ghost" disabled className="min-w-[160px] cursor-not-allowed opacity-60">
+                {t('room_detail.owner')}
+              </Button>
+            ) : hasJoined ? (
+              <Button variant="ghost" disabled className="min-w-[160px] cursor-not-allowed border-neon-green/50 text-neon-green">
+                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+                {t('room_detail.joined')}
+              </Button>
+            ) : (
+              <Button variant="primary" onClick={handleJoinRoom} className="min-w-[160px] shadow-neon-green">
+                {t('room_detail.join')}
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -439,9 +590,15 @@ export default function PublicRoom() {
                       })
                       .map((pos, idx) => {
                       const badge = getRankBadge(idx);
-                      const polymarketUrl = pos.marketSlug
-                        ? `https://polymarket.com/event/${pos.marketSlug}`
-                        : `https://polymarket.com/search?query=${encodeURIComponent(pos.market)}`;
+                      // Try slug first, then conditionId, then search
+                      let polymarketUrl: string;
+                      if (pos.marketSlug) {
+                        polymarketUrl = `https://polymarket.com/event/${pos.marketSlug}`;
+                      } else if (pos.conditionId) {
+                        polymarketUrl = `https://polymarket.com/event?id=${pos.conditionId}`;
+                      } else {
+                        polymarketUrl = `https://polymarket.com/markets?_q=${encodeURIComponent(pos.market)}`;
+                      }
                       return (
                         <div key={idx} className="group relative p-8 bg-midnight-950 border border-white/5 hover:border-neon-green/50 transition-all">
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
@@ -507,91 +664,102 @@ export default function PublicRoom() {
                       <p className="text-lg font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.stream_static')}</p>
                     </div>
                   ) : (
-                    activities
-                      .filter((act) => {
+                    groupActivities(
+                      activities.filter((act) => !blockedAddresses.has(act.address.toLowerCase())),
+                      positions
+                    ).map((group) => {
+                        const isExpanded = expandedGroups.has(group.key);
+                        const hasMultiple = group.activities.length > 1;
+                        const totalCount = group.buyCount + group.sellCount;
+
+                        // Filter based on volume
                         const min = minVolume ? parseFloat(minVolume) : 0;
                         const max = maxVolume ? parseFloat(maxVolume) : Infinity;
-                        return act.amount >= min && act.amount <= max;
-                      })
-                      .filter((act) => !blockedAddresses.has(act.address.toLowerCase()))
-                      .map((act, idx) => {
-                      const isBuy = act.type === 'buy';
-                      const isSell = act.type === 'sell';
-                      const polymarketUrl = `https://polymarket.com/search?query=${encodeURIComponent(act.market)}`;
-                      const polygonscanUrl = act.transactionHash ? `https://polygonscan.com/tx/${act.transactionHash}` : null;
-                      return (
-                        <div key={idx} className="relative p-5 bg-midnight-950 border border-white/5 hover:border-white/10 group transition-all">
-                          <div className="flex items-center justify-between gap-6">
-                            <div className="flex items-center gap-4 flex-1 min-w-0">
-                              <div className={`w-10 h-10 border skew-x-[-12deg] flex items-center justify-center shrink-0 ${isBuy ? 'border-neon-green/30 text-neon-green bg-neon-green/5' : isSell ? 'border-neon-red/30 text-neon-red bg-neon-red/5' : 'border-white/10 text-white/20 bg-white/5'
-                                }`}>
-                                <div className="skew-x-[12deg]">
-                                  {isBuy ? (
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
-                                  ) : isSell ? (
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 13l-5 5m0 0l-5-5m5 5V6" /></svg>
-                                  ) : (
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-xs font-black text-white mb-1 uppercase tracking-tighter truncate">
-                                    <MarketTitle text={act.market} />
-                                  </p>
-                                  {/* Links */}
-                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
-                                    <a
-                                      href={polymarketUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="p-1 text-white/20 hover:text-neon-cyan transition-all"
-                                      title={t('room_detail.view_on_polymarket', { defaultValue: 'View on Polymarket' })}
-                                    >
-                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                      </svg>
-                                    </a>
-                                    {polygonscanUrl && (
-                                      <a
-                                        href={polygonscanUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-1 text-white/20 hover:text-neon-purple transition-all"
-                                        title={t('room_detail.view_transaction', { defaultValue: 'View Transaction' })}
-                                      >
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                        </svg>
+                        const groupTotal = group.totalBuyAmount + group.totalSellAmount;
+                        if (groupTotal < min || groupTotal > max) return null;
+
+                        const renderActivityCard = (act: Activity, isLatest: boolean = false, showBorder: boolean = true) => {
+                          const isBuy = act.type === 'buy';
+                          const isSell = act.type === 'sell';
+                          const polymarketUrl = `https://polymarket.com/markets?_q=${encodeURIComponent(act.market)}`;
+                          return (
+                            <div className={`relative p-5 bg-midnight-950 ${showBorder ? 'border border-white/5' : ''} hover:border-white/10 transition-all`}>
+                              <div className="flex items-center justify-between gap-6">
+                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                  <div className={`w-10 h-10 border skew-x-[-12deg] flex items-center justify-center shrink-0 ${isBuy ? 'border-neon-green/30 text-neon-green bg-neon-green/5' : isSell ? 'border-neon-red/30 text-neon-red bg-neon-red/5' : 'border-white/10 text-white/20 bg-white/5'}`}>
+                                    <div className="skew-x-[12deg]">
+                                      {isBuy ? (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
+                                      ) : isSell ? (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 13l-5 5m0 0l-5-5m5 5V6" /></svg>
+                                      ) : (
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-xs font-black text-white mb-1 uppercase tracking-tighter truncate">
+                                        <MarketTitle text={act.market} />
+                                      </p>
+                                      <a href={polymarketUrl} target="_blank" rel="noopener noreferrer" className="p-1 text-white/20 hover:text-neon-cyan transition-all opacity-0 group-hover:opacity-100" title={t('room_detail.view_on_polymarket', { defaultValue: 'View on Polymarket' })} onClick={(e) => e.stopPropagation()}>
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                                       </a>
-                                    )}
+                                    </div>
+                                    <div className="flex items-center gap-3 text-[8px] font-bold text-white/30 uppercase tracking-[0.2em]">
+                                      <span className="text-white/60">{formatDisplayName(act)}</span>
+                                      <span className="text-white/20">•</span>
+                                      <span className={isBuy ? 'text-neon-green' : isSell ? 'text-neon-red' : ''}>{isBuy ? t('room_detail.type_buy') : isSell ? t('room_detail.type_sell') : act.type}</span>
+                                      {act.outcome && (<><span className="text-white/20">•</span><span className="text-neon-cyan">{act.outcome}</span></>)}
+                                      <span className="text-white/20">•</span>
+                                      <span className="text-white">${act.amount.toLocaleString()}</span>
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-3 text-[8px] font-bold text-white/30 uppercase tracking-[0.2em]">
-                                  <span className="text-white/60">{formatDisplayName(act)}</span>
-                                  <span className="text-white/20">•</span>
-                                  <span className={isBuy ? 'text-neon-green' : isSell ? 'text-neon-red' : ''}>
-                                    {isBuy ? t('room_detail.type_buy') : isSell ? t('room_detail.type_sell') : act.type}
-                                  </span>
-                                  {act.outcome && (
-                                    <>
-                                      <span className="text-white/20">•</span>
-                                      <span className="text-neon-cyan">{act.outcome}</span>
-                                    </>
-                                  )}
-                                  <span className="text-white/20">•</span>
-                                  <span className="text-white">${act.amount.toLocaleString()}</span>
+                                <div className="flex items-center gap-3">
+                                  {isLatest && hasMultiple && (<span className="px-2 py-0.5 text-[8px] font-black bg-neon-cyan/20 text-neon-cyan uppercase tracking-widest">{t('room_detail.latest', { defaultValue: '最新' })}</span>)}
+                                  <div className="text-[8px] font-bold text-white/10 uppercase tracking-widest">{formatTimestamp(act.timestamp, t)}</div>
                                 </div>
                               </div>
                             </div>
-                            <div className="text-[8px] font-bold text-white/10 uppercase tracking-widest pt-1">
-                              {formatTimestamp(act.timestamp, t)}
-                            </div>
+                          );
+                        };
+
+                        const renderSummary = () => (
+                          <div className="flex items-center gap-4 px-5 py-3 bg-midnight-900/50 border-t border-white/5 text-[9px] font-black uppercase tracking-widest">
+                            <span className="text-white/40">{t('room_detail.total_transactions', { count: totalCount, defaultValue: `共 ${totalCount} 笔` })}</span>
+                            {group.buyCount > 0 && (<><span className="text-white/10">|</span><span className="text-neon-green">{t('room_detail.buy_summary', { amount: group.totalBuyAmount.toLocaleString(), count: group.buyCount, defaultValue: `买入: $${group.totalBuyAmount.toLocaleString()} (${group.buyCount}次)` })}</span></>)}
+                            {group.sellCount > 0 && (<><span className="text-white/10">|</span><span className="text-neon-red">{t('room_detail.sell_summary', { amount: group.totalSellAmount.toLocaleString(), count: group.sellCount, defaultValue: `卖出: $${group.totalSellAmount.toLocaleString()} (${group.sellCount}次)` })}</span></>)}
+                            {group.positionValue !== null && (<><span className="text-white/10">|</span><span className="text-neon-cyan">持仓: ${group.positionValue.toLocaleString()}</span></>)}
+                            {group.profitLoss !== null && (<><span className="text-white/10">|</span><span className={group.profitLoss >= 0 ? 'text-neon-green' : 'text-neon-red'}>盈亏: {group.profitLoss >= 0 ? '+' : ''}${group.profitLoss.toLocaleString()}</span></>)}
                           </div>
-                        </div>
-                      );
-                    }))}
+                        );
+
+                        if (!hasMultiple) {
+                          return (<div key={group.key} className="group">{renderActivityCard(group.latestActivity, false, true)}</div>);
+                        }
+
+                        return (
+                          <div key={group.key} className="group">
+                            {isExpanded ? (
+                              <div onClick={() => toggleGroupExpanded(group.key)} className="cursor-pointer border border-white/5 hover:border-white/10 transition-all">
+                                {group.activities.map((act, idx) => (<div key={idx} className={idx > 0 ? 'border-t border-white/5' : ''}>{renderActivityCard(act, idx === 0, false)}</div>))}
+                                {renderSummary()}
+                              </div>
+                            ) : (
+                              <div onClick={() => toggleGroupExpanded(group.key)} className="cursor-pointer relative">
+                                <div className="absolute inset-0 bg-midnight-950 border border-white/5 translate-x-2 translate-y-2 opacity-30" />
+                                {group.activities.length > 2 && (<div className="absolute inset-0 bg-midnight-950 border border-white/5 translate-x-1 translate-y-1 opacity-50" />)}
+                                <div className="relative bg-midnight-950 border border-white/5 hover:border-white/10 transition-all">
+                                  {renderActivityCard(group.latestActivity, false, false)}
+                                  {renderSummary()}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
                 </div>
               )}
             </div>

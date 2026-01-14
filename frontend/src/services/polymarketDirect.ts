@@ -113,6 +113,8 @@ export const fetchActivitiesFromPolymarket = async (addresses: string[]): Promis
             outcome: activity.outcome,
             icon: activity.icon,
             transactionHash: activity.transactionHash,
+            conditionId: activity.conditionId,
+            marketSlug: activity.slug,
           });
         }
       }
