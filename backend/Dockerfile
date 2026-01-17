@@ -45,8 +45,12 @@ RUN npx prisma generate
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy startup script
+COPY start.sh ./
+RUN chmod +x start.sh
+
 # Expose port
 EXPOSE 3001
 
 # Start the application
-CMD ["pnpm", "start"]
+CMD ["./start.sh"]
