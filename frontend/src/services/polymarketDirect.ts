@@ -74,53 +74,66 @@ const profileNameCache = new Map<string, string>();
 export const fetchActivitiesFromPolymarket = async (addresses: string[]): Promise<Activity[]> => {
   const allActivities: Activity[] = [];
   const oneDayAgo = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
+  const batchSize = 5;
 
-  for (const address of addresses) {
-    try {
-      const response = await axios.get<PolymarketActivity[]>(`${POLYMARKET_DATA_API}/activity`, {
-        params: {
-          user: address.toLowerCase(),
-          limit: 500,
-        },
-        timeout: 15000,
-      });
+  // Process addresses in batches to avoid rate limiting
+  for (let i = 0; i < addresses.length; i += batchSize) {
+    const batch = addresses.slice(i, i + batchSize);
+    const promises = batch.map(async (address) => {
+      try {
+        const response = await axios.get<PolymarketActivity[]>(`${POLYMARKET_DATA_API}/activity`, {
+          params: {
+            user: address.toLowerCase(),
+            limit: 200, // Reduce limit to 200 to improve response time
+          },
+          timeout: 8000, // Reduce timeout to 8 seconds
+        });
 
-      if (response.data && Array.isArray(response.data)) {
-        const activities = response.data.filter((a) => a.timestamp >= oneDayAgo);
+        if (response.data && Array.isArray(response.data)) {
+          const activities = response.data.filter((a) => a.timestamp >= oneDayAgo);
 
-        for (const activity of activities) {
-          let type: Activity['type'];
-          if (activity.type === 'TRADE' && activity.side) {
-            type = activity.side === 'BUY' ? 'buy' : 'sell';
-          } else if (activity.type === 'REDEEM') {
-            type = 'redeem';
-          } else {
-            type = 'buy';
-          }
+          const processed = activities.map((activity) => {
+            let type: Activity['type'];
+            if (activity.type === 'TRADE' && activity.side) {
+              type = activity.side === 'BUY' ? 'buy' : 'sell';
+            } else if (activity.type === 'REDEEM') {
+              type = 'redeem';
+            } else {
+              type = 'buy';
+            }
 
-          const displayName = activity.name || activity.pseudonym;
-          if (displayName) {
-            profileNameCache.set(address.toLowerCase(), displayName);
-          }
+            const displayName = activity.name || activity.pseudonym;
+            if (displayName) {
+              profileNameCache.set(address.toLowerCase(), displayName);
+            }
 
-          allActivities.push({
-            address,
-            type,
-            market: activity.title,
-            amount: Math.round(activity.usdcSize * 100) / 100,
-            timestamp: new Date(activity.timestamp * 1000).toISOString(),
-            userName: displayName,
-            outcome: activity.outcome,
-            icon: activity.icon,
-            transactionHash: activity.transactionHash,
-            conditionId: activity.conditionId,
-            marketSlug: activity.slug,
+            return {
+              address,
+              type,
+              market: activity.title,
+              amount: Math.round(activity.usdcSize * 100) / 100,
+              timestamp: new Date(activity.timestamp * 1000).toISOString(),
+              userName: displayName,
+              outcome: activity.outcome,
+              icon: activity.icon,
+              transactionHash: activity.transactionHash,
+              conditionId: activity.conditionId,
+              marketSlug: activity.slug,
+            };
           });
+
+          return processed;
         }
+      } catch (error) {
+        console.warn(`Error fetching activities for ${address}:`, error);
       }
-    } catch (error) {
-      console.error(`Error fetching activities for ${address}:`, error);
-    }
+      return [];
+    });
+
+    const batchResults = await Promise.all(promises);
+    batchResults.forEach((results) => {
+      allActivities.push(...results);
+    });
   }
 
   return allActivities.sort(
@@ -141,54 +154,72 @@ export const fetchPositionsFromPolymarket = async (addresses: string[]): Promise
     conditionId: string;
   }>();
 
-  for (const address of addresses) {
-    try {
-      const response = await axios.get<PolymarketPosition[]>(`${POLYMARKET_DATA_API}/positions`, {
-        params: {
-          user: address.toLowerCase(),
-        },
-        timeout: 10000,
-      });
+  const batchSize = 5;
 
-      if (response.data && Array.isArray(response.data)) {
-        const userName = profileNameCache.get(address.toLowerCase());
+  // Process addresses in batches to avoid rate limiting
+  for (let i = 0; i < addresses.length; i += batchSize) {
+    const batch = addresses.slice(i, i + batchSize);
+    const promises = batch.map(async (address) => {
+      try {
+        const response = await axios.get<PolymarketPosition[]>(`${POLYMARKET_DATA_API}/positions`, {
+          params: {
+            user: address.toLowerCase(),
+          },
+          timeout: 8000, // Reduce timeout to 8 seconds
+        });
 
-        for (const position of response.data) {
-          const marketKey = `${position.conditionId}_${position.outcome}`;
-          const currentValue = position.currentValue || 0;
+        if (response.data && Array.isArray(response.data)) {
+          const userName = profileNameCache.get(address.toLowerCase());
 
-          if (allPositions.has(marketKey)) {
-            const existing = allPositions.get(marketKey)!;
-            existing.totalValue += currentValue;
-            existing.totalShares += position.size;
-            existing.holders.set(address.toLowerCase(), {
-              address,
-              userName,
-              shares: position.size,
-              value: currentValue,
-            });
-          } else {
-            const holders = new Map<string, PositionHolder>();
-            holders.set(address.toLowerCase(), {
-              address,
-              userName,
-              shares: position.size,
-              value: currentValue,
-            });
-            allPositions.set(marketKey, {
-              market: position.title,
-              outcome: position.outcome,
-              totalValue: currentValue,
-              totalShares: position.size,
-              holders,
-              conditionId: position.conditionId,
-            });
-          }
+          const processed = response.data.map((position) => ({
+            position,
+            address,
+            userName,
+          }));
+
+          return processed;
         }
+      } catch (error) {
+        console.warn(`Error fetching positions for ${address}:`, error);
       }
-    } catch (error) {
-      console.error(`Error fetching positions for ${address}:`, error);
-    }
+      return [];
+    });
+
+    const batchResults = await Promise.all(promises);
+    batchResults.forEach((results) => {
+      results.forEach(({ position, address, userName }) => {
+        const marketKey = `${position.conditionId}_${position.outcome}`;
+        const currentValue = position.currentValue || 0;
+
+        if (allPositions.has(marketKey)) {
+          const existing = allPositions.get(marketKey)!;
+          existing.totalValue += currentValue;
+          existing.totalShares += position.size;
+          existing.holders.set(address.toLowerCase(), {
+            address,
+            userName,
+            shares: position.size,
+            value: currentValue,
+          });
+        } else {
+          const holders = new Map<string, PositionHolder>();
+          holders.set(address.toLowerCase(), {
+            address,
+            userName,
+            shares: position.size,
+            value: currentValue,
+          });
+          allPositions.set(marketKey, {
+            market: position.title,
+            outcome: position.outcome,
+            totalValue: currentValue,
+            totalShares: position.size,
+            holders,
+            conditionId: position.conditionId,
+          });
+        }
+      });
+    });
   }
 
   // Get unique conditionIds and fetch their slugs (non-blocking)
