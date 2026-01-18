@@ -148,6 +148,7 @@ export default function Feed() {
       if (allAddresses.length === 0) {
         setActivities([]);
         setPositions([]);
+        setLastRefresh(new Date());
         return;
       }
 
