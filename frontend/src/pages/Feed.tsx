@@ -145,8 +145,15 @@ export default function Feed() {
       console.log('Feed: rooms loaded:', allRooms);
       setRooms(allRooms);
 
-      const allAddresses = Array.from(new Set(allRooms.flatMap(r => r.addresses || []).map(a => a.address)));
-      console.log('Feed: addresses:', allAddresses);
+      // Aggregate and deduplicate all addresses across all rooms (normalize to lowercase)
+      const uniqueAddresses = new Set<string>();
+      allRooms.forEach(r => {
+        (r.addresses || []).forEach(a => {
+          uniqueAddresses.add(a.address.toLowerCase());
+        });
+      });
+      const allAddresses = Array.from(uniqueAddresses);
+      console.log('Feed: deduplicated addresses:', allAddresses.length, 'total before dedup:', allRooms.reduce((sum, r) => sum + (r.addresses?.length || 0), 0));
 
       if (allAddresses.length === 0) {
         setActivities([]);
