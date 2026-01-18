@@ -27,24 +27,40 @@ export default function Navbar() {
                         </Link>
 
                         <div className="hidden md:flex items-center gap-8">
-                            {[
-                                { name: t('nav.explore'), path: '/explore' },
-                                { name: t('nav.dashboard'), path: '/dashboard' },
-                            ].map((link) => (
+                            {user ? (
+                                [
+                                    { name: t('nav.explore'), path: '/explore' },
+                                    { name: t('nav.feed'), path: '/feed' },
+                                    { name: t('nav.dashboard'), path: '/dashboard' },
+                                ].map((link) => (
+                                    <Link
+                                        key={link.path}
+                                        to={link.path}
+                                        className={`
+                            relative py-2 text-xs font-bold uppercase tracking-widest transition-all
+                            ${isActive(link.path) ? 'text-neon-green glow-text-green' : 'text-foreground/50 hover:text-foreground'}
+                          `}
+                                    >
+                                        {link.name}
+                                        {isActive(link.path) && (
+                                            <div className="absolute -bottom-1 left-0 right-0 h-[2px] bg-neon-green shadow-neon-green" />
+                                        )}
+                                    </Link>
+                                ))
+                            ) : (
                                 <Link
-                                    key={link.path}
-                                    to={link.path}
+                                    to="/explore"
                                     className={`
-                    relative py-2 text-xs font-bold uppercase tracking-widest transition-all
-                    ${isActive(link.path) ? 'text-neon-green glow-text-green' : 'text-foreground/50 hover:text-foreground'}
-                  `}
+                        relative py-2 text-xs font-bold uppercase tracking-widest transition-all
+                        ${isActive('/explore') ? 'text-neon-green glow-text-green' : 'text-foreground/50 hover:text-foreground'}
+                      `}
                                 >
-                                    {link.name}
-                                    {isActive(link.path) && (
+                                    {t('nav.explore')}
+                                    {isActive('/explore') && (
                                         <div className="absolute -bottom-1 left-0 right-0 h-[2px] bg-neon-green shadow-neon-green" />
                                     )}
                                 </Link>
-                            ))}
+                            )}
                         </div>
                     </div>
 
