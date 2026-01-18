@@ -5,6 +5,7 @@ import authRoutes from './routes/auth';
 import otpRoutes from './routes/otp';
 import roomRoutes from './routes/rooms';
 import addressRoutes from './routes/addresses';
+import postRoutes from './routes/posts';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api', postRoutes);
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);

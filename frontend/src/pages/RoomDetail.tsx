@@ -2,12 +2,16 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTranslate } from '../hooks/useTranslate';
+import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Linkify from '../components/ui/Linkify';
+import PostInput from '../components/PostInput';
+import PostCard from '../components/PostCard';
 import { roomService } from '../services/roomService';
 import { addressService } from '../services/addressService';
+import { postService, type Post } from '../services/postService';
 import {
   fetchActivitiesFromPolymarket,
   fetchPositionsFromPolymarket,
@@ -125,11 +129,13 @@ export default function RoomDetail() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [room, setRoom] = useState<Room | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [addressInput, setAddressInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -175,6 +181,15 @@ export default function RoomDetail() {
       console.error('Failed to load room:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPosts = async () => {
+    try {
+      const data = await postService.getPosts(id!);
+      setPosts(data);
+    } catch (error) {
+      console.error('Failed to load posts:', error);
     }
   };
 
@@ -272,6 +287,9 @@ export default function RoomDetail() {
 
     // Load room info
     loadRoom();
+
+    // Load posts
+    loadPosts();
 
     // Always refresh data in background
     refreshData();
@@ -508,6 +526,9 @@ export default function RoomDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         {/* Sidebar - Addresses */}
         <div className="lg:col-span-4 space-y-8">
+          {/* Post Input for Room Owner */}
+          <PostInput roomId={id!} onPostCreated={loadPosts} />
+
           <Card className="p-8 border-border bg-card/50">
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-xl font-black uppercase tracking-tighter mb-8 italic flex items-center gap-3">
@@ -629,6 +650,29 @@ export default function RoomDetail() {
               </div>
 
               <div className="space-y-6">
+                  {/* Owner Posts */}
+                  {posts.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 px-3 py-1 bg-neon-cyan/20 border border-neon-cyan/30">
+                        <svg className="w-4 h-4 text-neon-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        <span className="text-[10px] font-black text-neon-cyan uppercase tracking-widest">
+                          {t('room_detail.announcements', { defaultValue: '群主公告' })}
+                        </span>
+                      </div>
+                      {posts.map((post) => (
+                        <PostCard
+                          key={post.id}
+                          post={post}
+                          isOwner={user?.id === room?.userId}
+                          onPostDeleted={loadPosts}
+                          onCommentAdded={loadPosts}
+                        />
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center mb-8 bg-muted p-4 border-l-2 border-neon-cyan">
                     <p className="text-[10px] font-bold text-neon-cyan uppercase tracking-widest">Live Activity Monitoring</p>
                     <span className="text-[10px] font-bold text-foreground/20 uppercase tracking-widest">

@@ -191,9 +191,14 @@ export const fetchPositionsFromPolymarket = async (addresses: string[]): Promise
     }
   }
 
-  // Get unique conditionIds and fetch their slugs
+  // Get unique conditionIds and fetch their slugs (non-blocking)
   const conditionIds = [...new Set(Array.from(allPositions.values()).map(p => p.conditionId))];
-  const slugs = await fetchMarketSlugs(conditionIds);
+  let slugs = new Map<string, string>();
+  try {
+    slugs = await fetchMarketSlugs(conditionIds);
+  } catch (error) {
+    console.warn('Failed to fetch market slugs:', error);
+  }
 
   return Array.from(allPositions.values())
     .map((pos) => ({
