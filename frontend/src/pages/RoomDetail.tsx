@@ -19,7 +19,6 @@ import { getRoomCache, setRoomCache } from '../services/roomCacheService';
 import type { Room, Address } from '../services/roomService';
 import { formatAddress, formatDisplayName, formatTimestamp, getRankBadge } from '../utils/formatting';
 
-type TabType = 'positions' | 'activities';
 const AUTO_REFRESH_INTERVAL = 120000; // 2 minutes
 
 interface ActivityGroup {
@@ -136,13 +135,14 @@ export default function RoomDetail() {
   const [copied, setCopied] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [addError, setAddError] = useState('');
-  const [activeTab, setActiveTab] = useState<TabType>('positions');
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [minVolume, setMinVolume] = useState<string>('');
   const [maxVolume, setMaxVolume] = useState<string>('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [showPositions, setShowPositions] = useState(false);
   const refreshTimerRef = useRef<number | null>(null);
+  const positionsRef = useRef<HTMLDivElement>(null);
 
   const toggleGroupExpanded = (key: string) => {
     setExpandedGroups(prev => {
@@ -155,6 +155,17 @@ export default function RoomDetail() {
       return next;
     });
   };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (positionsRef.current && !positionsRef.current.contains(event.target as Node)) {
+        setShowPositions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const loadRoom = async () => {
     try {
@@ -425,6 +436,64 @@ export default function RoomDetail() {
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Collapsible Positions Dropdown */}
+          <div className="relative" ref={positionsRef}>
+            <button
+              onClick={() => setShowPositions(!showPositions)}
+              className={`flex items-center gap-2 px-4 py-2.5 border text-[10px] font-black uppercase tracking-widest transition-all ${
+                showPositions
+                  ? 'bg-neon-green text-midnight-950 border-neon-green'
+                  : 'bg-muted text-foreground/60 border-border hover:border-neon-green hover:text-neon-green'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <span>{t('room_detail.tabs.positions')}</span>
+              <span className="px-1.5 py-0.5 bg-white/10 text-[8px]">{positions.length}</span>
+              <svg className={`w-3 h-3 transition-transform ${showPositions ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Positions Dropdown Panel */}
+            {showPositions && (
+              <div className="absolute left-0 top-full mt-2 w-[500px] bg-card border border-border shadow-2xl z-50 animate-fade-in">
+                <div className="p-4 border-b border-border">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-foreground/60">
+                    {t('room_detail.tabs.positions')}
+                  </h3>
+                </div>
+                <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-4 space-y-3">
+                  {positions.length === 0 ? (
+                    <div className="py-8 text-center">
+                      <p className="text-sm font-black text-foreground/20 uppercase italic tracking-tighter">{t('room_detail.no_positions')}</p>
+                    </div>
+                  ) : (
+                    positions.map((pos, idx) => {
+                      const badge = getRankBadge(idx);
+                      return (
+                        <div key={idx} className="p-4 bg-background border border-border hover:border-neon-green/50 transition-all">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              {badge && <span className="text-lg">{badge.emoji}</span>}
+                              <h4 className="text-sm font-black text-foreground uppercase tracking-tighter truncate">
+                                <MarketTitle text={pos.market} />
+                              </h4>
+                            </div>
+                            <div className="text-xl font-mono font-black text-neon-green">
+                              ${pos.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <Button variant="cyber" onClick={handleToggleVisibility} className="min-w-[160px]">
             {room.isPublic ? t('room_detail.make_private') : t('room_detail.make_public')}
           </Button>
@@ -529,27 +598,6 @@ export default function RoomDetail() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 bg-muted/30 p-2 border-b border-border">
-              <button
-                onClick={() => setActiveTab('positions')}
-                className={`flex items-center justify-center gap-3 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all skew-x-[-12deg] ${activeTab === 'positions'
-                  ? 'bg-neon-green text-midnight-950 shadow-neon-green'
-                  : 'text-foreground/40 hover:text-foreground hover:bg-foreground/5'
-                  }`}
-              >
-                <span className="skew-x-[12deg]">{t('room_detail.tabs.positions')}</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('activities')}
-                className={`flex items-center justify-center gap-3 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all skew-x-[-12deg] ${activeTab === 'activities'
-                  ? 'bg-neon-cyan text-midnight-950 shadow-neon-cyan'
-                  : 'text-foreground/40 hover:text-foreground hover:bg-foreground/5'
-                  }`}
-              >
-                <span className="skew-x-[12deg]">{t('room_detail.tabs.activity')}</span>
-              </button>
-            </div>
-
             <div className="p-8">
               {/* Filter controls - shared between tabs */}
               <div className="flex items-center gap-4 mb-6 p-4 bg-muted/50 border border-border">
@@ -580,90 +628,7 @@ export default function RoomDetail() {
                 )}
               </div>
 
-              {activeTab === 'positions' ? (
-                <div className="space-y-6">
-                  {positions.length === 0 ? (
-                    <div className="py-32 text-center">
-                      <p className="text-xl font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.no_positions')}</p>
-                    </div>
-                  ) : (
-                    positions
-                      .filter((pos) => {
-                        const min = minVolume ? parseFloat(minVolume) : 0;
-                        const max = maxVolume ? parseFloat(maxVolume) : Infinity;
-                        return pos.totalValue >= min && pos.totalValue <= max;
-                      })
-                      .map((pos, idx) => {
-                      const badge = getRankBadge(idx);
-                      // Try slug first, then conditionId, then search
-                      let polymarketUrl: string;
-                      if (pos.marketSlug) {
-                        polymarketUrl = `https://polymarket.com/event/${pos.marketSlug}`;
-                      } else if (pos.conditionId) {
-                        polymarketUrl = `https://polymarket.com/event?id=${pos.conditionId}`;
-                      } else {
-                        polymarketUrl = `https://polymarket.com/markets?_q=${encodeURIComponent(pos.market)}`;
-                      }
-                      return (
-                        <div key={idx} className="group relative p-8 bg-background border border-border hover:border-neon-green transition-all">
-                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
-                            <div className="flex-1 min-w-0 space-y-4">
-                              <div className="flex items-center gap-3">
-                                {badge && <span className="text-2xl">{badge.emoji}</span>}
-                                <h3 className="text-xl font-black text-foreground group-hover:text-neon-green transition-colors leading-[0.9] uppercase tracking-tighter">
-                                  <MarketTitle text={pos.market} />
-                                </h3>
-                                {/* Polymarket link button */}
-                                <a
-                                  href={polymarketUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="p-1.5 text-foreground/20 hover:text-neon-cyan transition-all opacity-0 group-hover:opacity-100"
-                                  title={t('room_detail.view_on_polymarket', { defaultValue: 'View on Polymarket' })}
-                                >
-                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                  </svg>
-                                </a>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-4">
-                                <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-widest ${pos.outcome.toLowerCase() === 'yes' ? 'bg-neon-green text-midnight-950' : 'bg-neon-red text-midnight-950'
-                                  }`}>
-                                  {pos.outcome.toLowerCase() === 'yes' ? t('common.yes') : t('common.no')}
-                                </span>
-                                <div className="text-[9px] font-black text-foreground/30 tracking-widest uppercase">
-                                  <span className="text-foreground">{pos.totalShares.toLocaleString()}</span> {t('room_detail.shares')}
-                                </div>
-                              </div>
-                              {/* Show holders */}
-                              {pos.holders && pos.holders.length > 0 && (
-                                <div className="flex flex-wrap items-center gap-2 mt-3">
-                                  <span className="text-[9px] font-black text-foreground/30 uppercase tracking-widest">{t('room_detail.held_by')}</span>
-                                  {pos.holders.map((holder, hIdx) => (
-                                    <span
-                                      key={hIdx}
-                                      className="px-2 py-1 text-[9px] font-bold bg-muted border border-border text-neon-cyan truncate max-w-[120px]"
-                                      title={`${holder.userName || formatAddress(holder.address)} - ${holder.shares.toLocaleString()} shares ($${holder.value.toLocaleString()})`}
-                                    >
-                                      {holder.userName || formatAddress(holder.address)}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex items-center md:flex-col md:items-end gap-6 md:gap-2">
-                              <div className="text-4xl font-mono font-black text-foreground tracking-tighter">
-                                ${pos.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }))}
-                </div>
-              ) : (
-                <div className="space-y-6">
+              <div className="space-y-6">
                   <div className="flex justify-between items-center mb-8 bg-muted p-4 border-l-2 border-neon-cyan">
                     <p className="text-[10px] font-bold text-neon-cyan uppercase tracking-widest">Live Activity Monitoring</p>
                     <span className="text-[10px] font-bold text-foreground/20 uppercase tracking-widest">
@@ -845,8 +810,7 @@ export default function RoomDetail() {
                       })
                     )}
                   </div>
-                </div>
-              )}
+              </div>
             </div>
           </Card>
         </div>

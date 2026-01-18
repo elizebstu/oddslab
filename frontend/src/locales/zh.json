@@ -82,6 +82,16 @@
         "delete_confirm_title": "删除房间",
         "delete_confirm_message": "确定要删除 \"{{roomName}}\" 吗？此操作无法撤销。"
     },
+    "feed": {
+        "activity_groups": "个活动组",
+        "no_rooms_message": "添加房间以查看网络中的聚合活动。",
+        "pnl": "盈亏",
+        "transactions": "笔交易",
+        "total_buys": "总买入",
+        "total_sells": "总卖出",
+        "current_position": "当前持仓",
+        "transaction_history": "交易历史"
+    },
     "explore": {
         "badge": "公共网络",
         "title": "探索",

@@ -30,16 +30,28 @@ export default function Navbar() {
               Explore
             </Link>
             {user && (
-              <Link
-                to="/dashboard"
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive('/dashboard')
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-surface-500 hover:text-surface-900 hover:bg-surface-50'
-                }`}
-              >
-                My Rooms
-              </Link>
+              <>
+                <Link
+                  to="/feed"
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive('/feed')
+                      ? 'bg-primary-50 text-primary-700'
+                      : 'text-surface-500 hover:text-surface-900 hover:bg-surface-50'
+                  }`}
+                >
+                  Feed
+                </Link>
+                <Link
+                  to="/dashboard"
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive('/dashboard')
+                      ? 'bg-primary-50 text-primary-700'
+                      : 'text-surface-500 hover:text-surface-900 hover:bg-surface-50'
+                  }`}
+                >
+                  My Rooms
+                </Link>
+              </>
             )}
           </div>
         </div>

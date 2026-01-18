@@ -82,6 +82,16 @@
         "delete_confirm_title": "Delete Room",
         "delete_confirm_message": "Are you sure you want to delete \"{{roomName}}\"? This action cannot be undone."
     },
+    "feed": {
+        "activity_groups": "Activity Groups",
+        "no_rooms_message": "Add rooms to see aggregated activity across your network.",
+        "pnl": "P&L",
+        "transactions": "transactions",
+        "total_buys": "Total Buys",
+        "total_sells": "Total Sells",
+        "current_position": "Current Position",
+        "transaction_history": "Transaction History"
+    },
     "explore": {
         "badge": "Public Network",
         "title": "EXPLORE",
