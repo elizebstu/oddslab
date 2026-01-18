@@ -138,35 +138,46 @@ export default function Feed() {
   };
 
   const loadData = useCallback(async (showLoading = false) => {
+    console.log('Feed: loadData called, showLoading=', showLoading);
     if (showLoading) setLoading(true);
     try {
       const allRooms = await roomService.getRooms();
+      console.log('Feed: rooms loaded:', allRooms);
       setRooms(allRooms);
 
       const allAddresses = Array.from(new Set(allRooms.flatMap(r => r.addresses || []).map(a => a.address)));
+      console.log('Feed: addresses:', allAddresses);
 
       if (allAddresses.length === 0) {
         setActivities([]);
         setPositions([]);
         setLastRefresh(new Date());
+        console.log('Feed: no addresses, returning early');
         return;
       }
 
+      console.log('Feed: fetching activities and positions...');
       const [fetchedActivities, fetchedPositions] = await Promise.all([
         fetchActivitiesFromPolymarket(allAddresses),
         fetchPositionsFromPolymarket(allAddresses)
       ]);
+      console.log('Feed: activities:', fetchedActivities.length, 'positions:', fetchedPositions.length);
 
       setActivities(fetchedActivities);
       setPositions(fetchedPositions);
       setLastRefresh(new Date());
 
-      // Fetch profile names
-      const names = await fetchProfileNames(allAddresses);
-      setProfileNames(names);
+      // Fetch profile names (non-blocking)
+      fetchProfileNames(allAddresses).then(names => {
+        console.log('Feed: profile names loaded:', names.size);
+        setProfileNames(names);
+      }).catch(err => {
+        console.warn('Feed: failed to load profile names:', err);
+      });
     } catch (error) {
-      console.error('Failed to load feed data:', error);
+      console.error('Feed: Failed to load feed data:', error);
     } finally {
+      console.log('Feed: setting loading to false');
       setLoading(false);
       setIsRefreshing(false);
     }
