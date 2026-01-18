@@ -123,6 +123,9 @@ export default function Feed() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [profileNames, setProfileNames] = useState<Map<string, string>>(new Map());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [selectedAddresses, setSelectedAddresses] = useState<string[]>([]);
+  const [showAddressFilter, setShowAddressFilter] = useState(false);
+  const [allAddresses, setAllAddresses] = useState<string[]>([]);
   const refreshTimerRef = useRef<number | null>(null);
 
   const toggleGroupExpanded = (key: string) => {
@@ -137,10 +140,42 @@ export default function Feed() {
     });
   };
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const dropdown = document.querySelector('.address-filter-dropdown');
+      const button = document.querySelector('.address-filter-button');
+
+      if (button && !button.contains(event.target as Node) &&
+          dropdown && !dropdown.contains(event.target as Node)) {
+        setShowAddressFilter(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const loadData = useCallback(async (showLoading = false) => {
     console.log('Feed: loadData called, showLoading=', showLoading);
     if (showLoading) setLoading(true);
     try {
+      // Check cache first
+      const cacheKey = 'feed_data';
+      const cached = localStorage.getItem(cacheKey);
+      const cacheTime = 60 * 1000; // 1 minute cache
+
+      if (cached) {
+        const { activities, positions, lastUpdated } = JSON.parse(cached);
+        if (Date.now() - lastUpdated < cacheTime) {
+          console.log('Feed: using cached data');
+          setActivities(activities);
+          setPositions(positions);
+          setLoading(false);
+          return;
+        }
+      }
+
       const allRooms = await roomService.getRooms();
       console.log('Feed: rooms loaded:', allRooms);
       setRooms(allRooms);
@@ -152,10 +187,11 @@ export default function Feed() {
           uniqueAddresses.add(a.address.toLowerCase());
         });
       });
-      const allAddresses = Array.from(uniqueAddresses);
-      console.log('Feed: deduplicated addresses:', allAddresses.length, 'total before dedup:', allRooms.reduce((sum, r) => sum + (r.addresses?.length || 0), 0));
+      const addresses = Array.from(uniqueAddresses);
+      console.log('Feed: deduplicated addresses:', addresses.length, 'total before dedup:', allRooms.reduce((sum, r) => sum + (r.addresses?.length || 0), 0));
+      setAllAddresses(addresses);
 
-      if (allAddresses.length === 0) {
+      if (addresses.length === 0) {
         setActivities([]);
         setPositions([]);
         setLastRefresh(new Date());
@@ -165,8 +201,8 @@ export default function Feed() {
 
       console.log('Feed: fetching activities and positions...');
       const [fetchedActivities, fetchedPositions] = await Promise.all([
-        fetchActivitiesFromPolymarket(allAddresses),
-        fetchPositionsFromPolymarket(allAddresses)
+        fetchActivitiesFromPolymarket(addresses),
+        fetchPositionsFromPolymarket(addresses)
       ]);
       console.log('Feed: activities:', fetchedActivities.length, 'positions:', fetchedPositions.length);
 
@@ -174,8 +210,15 @@ export default function Feed() {
       setPositions(fetchedPositions);
       setLastRefresh(new Date());
 
+      // Cache the data
+      localStorage.setItem(cacheKey, JSON.stringify({
+        activities: fetchedActivities,
+        positions: fetchedPositions,
+        lastUpdated: Date.now()
+      }));
+
       // Fetch profile names (non-blocking)
-      fetchProfileNames(allAddresses).then(names => {
+      fetchProfileNames(addresses).then(names => {
         console.log('Feed: profile names loaded:', names.size);
         setProfileNames(names);
       }).catch(err => {
@@ -212,7 +255,12 @@ export default function Feed() {
     };
   }, [handleRefresh]);
 
-  const groupedActivities = groupActivities(activities, positions);
+  // Filter activities based on selected addresses
+  const filteredActivities = selectedAddresses.length > 0
+    ? activities.filter(activity => selectedAddresses.some(addr => addr.toLowerCase() === activity.address.toLowerCase()))
+    : activities;
+
+  const groupedActivities = groupActivities(filteredActivities, positions);
 
   const getProfileName = (address: string): string | null => {
     return profileNames.get(address.toLowerCase()) || null;
@@ -247,6 +295,92 @@ export default function Feed() {
           </div>
         </div>
         <div className="flex items-center gap-4">
+          {/* Address Filter Dropdown */}
+          <div className="relative">
+            <button
+              className="address-filter-button flex items-center gap-2 px-4 py-2 border text-[10px] font-black uppercase tracking-widest transition-all"
+              onClick={() => setShowAddressFilter(!showAddressFilter)}
+              style={{
+                background: showAddressFilter ? 'var(--neon-cyan)' : 'var(--muted)',
+                color: showAddressFilter ? 'var(--midnight-950)' : 'var(--foreground/60)',
+                borderColor: showAddressFilter ? 'var(--neon-cyan)' : 'var(--border)',
+              }}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              <span>{t('feed.filter_addresses', { defaultValue: 'Filter Addresses' })}</span>
+              {selectedAddresses.length > 0 && (
+                <span className="px-1.5 py-0.5 bg-white/10 text-[8px]">{selectedAddresses.length}</span>
+              )}
+              <svg className={`w-3 h-3 transition-transform ${showAddressFilter ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Address Filter Dropdown Panel */}
+            {showAddressFilter && (
+              <div className="address-filter-dropdown absolute right-0 top-full mt-2 w-[300px] bg-card border border-border shadow-2xl z-50 animate-fade-in">
+                <div className="p-4 border-b border-border">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-foreground/60">
+                    {t('feed.select_addresses', { defaultValue: 'Select Addresses' })}
+                  </h3>
+                </div>
+                <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-4 space-y-2">
+                  {allAddresses.length === 0 ? (
+                    <div className="py-8 text-center">
+                      <p className="text-sm font-black text-foreground/20 uppercase italic tracking-tighter">{t('feed.no_addresses', { defaultValue: 'No addresses to filter' })}</p>
+                    </div>
+                  ) : (
+                    allAddresses.map((address) => {
+                      const displayName = profileNames.get(address.toLowerCase()) || formatAddress(address);
+                      const isSelected = selectedAddresses.includes(address);
+                      return (
+                        <div
+                          key={address}
+                          className={`flex items-center gap-3 p-3 bg-background border border-border hover:border-neon-cyan/50 transition-all cursor-pointer ${
+                            isSelected ? 'border-neon-cyan bg-neon-cyan/5' : ''
+                          }`}
+                          onClick={() => {
+                            setSelectedAddresses(prev => {
+                              if (isSelected) {
+                                return prev.filter(addr => addr !== address);
+                              } else {
+                                return [...prev, address];
+                              }
+                            });
+                          }}
+                        >
+                          <div className={`w-2 h-2 rounded-full ${isSelected ? 'bg-neon-cyan' : 'bg-foreground/20'}`} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-foreground truncate">{displayName}</p>
+                            <p className="text-[10px] font-mono text-foreground/40 truncate">{formatAddress(address)}</p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+                <div className="p-4 border-t border-border">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => setSelectedAddresses([])}
+                      className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-foreground/60 hover:text-neon-red transition-all"
+                    >
+                      {t('feed.clear_all', { defaultValue: 'Clear All' })}
+                    </button>
+                    <button
+                      onClick={() => setSelectedAddresses(allAddresses)}
+                      className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-foreground/60 hover:text-neon-green transition-all"
+                    >
+                      {t('feed.select_all', { defaultValue: 'Select All' })}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <span className="text-[10px] font-mono font-bold text-foreground/30 uppercase tracking-widest">
             {t('room_detail.last_refresh', { time: formatTimestamp(lastRefresh.toISOString(), t) })}
           </span>
