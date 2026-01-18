@@ -22,8 +22,14 @@ export default function Register() {
     try {
       await register(email, password);
       navigate('/dashboard');
-    } catch (error) {
-      setError(t('auth.register.error'));
+    } catch (err) {
+      // Extract error message from backend response
+      const errorMessage = (err as any)?.response?.data?.error;
+      if (errorMessage) {
+        setError(errorMessage);
+      } else {
+        setError(t('auth.register.error_default'));
+      }
     } finally {
       setLoading(false);
     }

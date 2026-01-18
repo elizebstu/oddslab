@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
+import otpRoutes from './routes/otp';
 import roomRoutes from './routes/rooms';
 import addressRoutes from './routes/addresses';
 
@@ -17,6 +18,7 @@ app.use(cors({
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/otp', otpRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/addresses', addressRoutes);
 

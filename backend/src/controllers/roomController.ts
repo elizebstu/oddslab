@@ -4,7 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 
 export const createRoom = async (req: AuthRequest, res: Response) => {
   try {
-    const { name } = req.body;
+    const { name, description, twitterLink, telegramLink, discordLink } = req.body;
     const userId = req.userId!;
 
     if (!name) {
@@ -12,7 +12,14 @@ export const createRoom = async (req: AuthRequest, res: Response) => {
     }
 
     const room = await prisma.room.create({
-      data: { name, userId },
+      data: {
+        name,
+        description,
+        twitterLink,
+        telegramLink,
+        discordLink,
+        userId,
+      },
     });
 
     res.status(201).json(room);
@@ -106,6 +113,39 @@ export const toggleVisibility = async (req: AuthRequest, res: Response) => {
     res.json(updatedRoom);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update room visibility' });
+  }
+};
+
+export const updateRoom = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description, twitterLink, telegramLink, discordLink } = req.body;
+    const userId = req.userId!;
+
+    const room = await prisma.room.findUnique({ where: { id: id as string } });
+
+    if (!room) {
+      return res.status(404).json({ error: 'Room not found' });
+    }
+
+    if (room.userId !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const updatedRoom = await prisma.room.update({
+      where: { id: id as string },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
+        ...(twitterLink !== undefined && { twitterLink }),
+        ...(telegramLink !== undefined && { telegramLink }),
+        ...(discordLink !== undefined && { discordLink }),
+      },
+    });
+
+    res.json(updatedRoom);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update room' });
   }
 };
 

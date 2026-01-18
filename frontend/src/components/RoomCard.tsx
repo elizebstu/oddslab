@@ -9,9 +9,10 @@ interface RoomCardProps {
   variant?: 'default' | 'compact';
   showActions?: boolean;
   onDelete?: (id: string) => void;
+  isDeleting?: boolean;
 }
 
-export default function RoomCard({ room, variant = 'default', showActions = false, onDelete }: RoomCardProps) {
+export default function RoomCard({ room, variant = 'default', showActions = false, onDelete, isDeleting = false }: RoomCardProps) {
   const { t } = useTranslation();
   const linkPath = showActions ? `/rooms/${room.id}` : `/public/${room.id}`;
 
@@ -78,16 +79,22 @@ export default function RoomCard({ room, variant = 'default', showActions = fals
           </Button>
         </Link>
         {showActions && onDelete && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onDelete(room.id)}
-            className="group/del !px-3 hover:!border-neon-red/50 hover:!bg-neon-red/5"
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete(room.id);
+            }}
+            className="group/del inline-flex items-center justify-center font-display font-bold tracking-wider uppercase transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none rounded-none skew-x-[-6deg] bg-transparent text-foreground border-2 border-current/20 hover:border-current hover:bg-current/[0.05] px-4 py-1.5 text-[10px] hover:!border-neon-red/50 hover:!bg-neon-red/5 disabled:cursor-not-allowed"
+            disabled={isDeleting || !onDelete}
           >
-            <svg className="w-4 h-4 text-white/20 group-hover/del:text-neon-red transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </Button>
+            <span className="skew-x-[6deg] flex items-center gap-2">
+              <svg className="w-4 h-4 text-white/20 group-hover/del:text-neon-red transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </span>
+          </button>
         )}
       </div>
     </Card>

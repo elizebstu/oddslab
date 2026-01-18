@@ -3,6 +3,10 @@ import api from './api';
 export interface Room {
   id: string;
   name: string;
+  description?: string | null;
+  twitterLink?: string | null;
+  telegramLink?: string | null;
+  discordLink?: string | null;
   isPublic: boolean;
   userId: string;
   createdAt: string;
@@ -47,8 +51,38 @@ export interface Position {
 }
 
 export const roomService = {
-  createRoom: async (name: string): Promise<Room> => {
-    const response = await api.post('/rooms', { name });
+  createRoom: async (
+    name: string,
+    description?: string,
+    twitterLink?: string,
+    telegramLink?: string,
+    discordLink?: string
+  ): Promise<Room> => {
+    const response = await api.post('/rooms', {
+      name,
+      description,
+      twitterLink,
+      telegramLink,
+      discordLink,
+    });
+    return response.data;
+  },
+
+  updateRoom: async (
+    id: string,
+    name?: string,
+    description?: string,
+    twitterLink?: string,
+    telegramLink?: string,
+    discordLink?: string
+  ): Promise<Room> => {
+    const response = await api.patch(`/rooms/${id}`, {
+      name,
+      description,
+      twitterLink,
+      telegramLink,
+      discordLink,
+    });
     return response.data;
   },
 

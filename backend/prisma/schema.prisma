@@ -12,26 +12,42 @@ model User {
   email     String   @unique
   password  String
   createdAt DateTime @default(now())
-  rooms     Room[]
-}
-
-model Room {
-  id        String    @id @default(uuid())
-  name      String
-  isPublic  Boolean   @default(false)
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  addresses Address[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  Room      Room[]
 }
 
 model Address {
   id        String   @id @default(uuid())
   address   String
   roomId    String
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@unique([address, roomId])
+}
+
+model OtpCode {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  type      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, code])
+}
+
+model Room {
+  id          String    @id @default(uuid())
+  name        String
+  description String?   @db.Text
+  twitterLink String?   @map("twitter_link")
+  telegramLink String?  @map("telegram_link")
+  discordLink String?   @map("discord_link")
+  isPublic    Boolean   @default(false)
+  userId      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  addresses   Address[]
+  User        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

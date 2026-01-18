@@ -73,7 +73,14 @@
         "modal_subtitle": "Give your room a name to identify it in your dashboard.",
         "modal_label": "Room Name",
         "modal_placeholder": "e.g. My Whale Alerts",
-        "modal_error": "Room name exists or is invalid."
+        "modal_error": "Room name exists or is invalid.",
+        "description_label": "Description",
+        "description_placeholder": "Describe what this room tracks. Links will be automatically clickable.",
+        "twitter_label": "X (Twitter)",
+        "telegram_label": "Telegram",
+        "discord_label": "Discord",
+        "delete_confirm_title": "Delete Room",
+        "delete_confirm_message": "Are you sure you want to delete \"{{roomName}}\"? This action cannot be undone."
     },
     "explore": {
         "badge": "Public Network",
@@ -179,8 +186,13 @@
             "pass_placeholder": "••••••••",
             "button": "Login",
             "error": "Invalid email or password.",
+            "error_user_not_found": "User not found. Please check your email.",
+            "error_wrong_password": "Incorrect password.",
+            "error_default": "Login failed. Please try again.",
             "no_account": "New to Oddslab?",
-            "link": "Sign Up"
+            "link": "Sign Up",
+            "forgot_password": "Forgot Password?",
+            "otp_login": "Login with OTP"
         },
         "register": {
             "title": "TERMINAL",
@@ -189,8 +201,50 @@
             "email_label": "Email Address",
             "pass_label": "Password",
             "button": "Initialize Account",
+            "error": "Registration failed. Please try again.",
+            "error_user_exists": "This email is already registered. Please log in.",
+            "error_default": "Registration failed. Please try again.",
             "has_account": "Existing Operator?",
             "link": "Access Terminal"
+        },
+        "otp": {
+            "title": "VERIFY",
+            "title_highlight": "CODE",
+            "subtitle": "Login with email verification code",
+            "email_label": "Email Address",
+            "email_placeholder": "name@email.com",
+            "email_required": "Please enter your email",
+            "code_label": "Verification Code",
+            "code_placeholder": "Enter 6-digit code",
+            "all_fields_required": "Please fill in all fields",
+            "invalid_code_format": "Code must be 6 digits",
+            "send_code": "Send Verification Code",
+            "send_failed": "Failed to send code",
+            "verify_failed": "Invalid or expired code",
+            "verify_button": "Verify & Login",
+            "code_sent_to": "Code sent to:",
+            "resend_code": "Resend Code",
+            "resend_countdown": "Resend in {{seconds}}s",
+            "change_email": "Change email",
+            "back_to": "Back to",
+            "password_login": "Password Login",
+            "back_to_login": "Login",
+            "remember_password": "Remember your password?"
+        },
+        "reset": {
+            "title": "RESET",
+            "title_highlight": "PASSWORD",
+            "subtitle": "Secure account recovery",
+            "all_fields_required": "Please fill in all fields",
+            "password_too_short": "Password must be at least 6 characters",
+            "passwords_not_match": "Passwords do not match",
+            "failed": "Failed to reset password",
+            "success": "Password reset successfully! Redirecting...",
+            "reset_button": "Reset Password",
+            "new_password_label": "New Password",
+            "password_placeholder": "Enter new password",
+            "confirm_password_label": "Confirm Password",
+            "confirm_password_placeholder": "Confirm new password"
         }
     },
     "common": {

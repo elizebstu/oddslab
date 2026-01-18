@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import RoomCard from '../components/RoomCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
+import TextArea from '../components/ui/TextArea';
 import Modal from '../components/ui/Modal';
 import { roomService } from '../services/roomService';
 import { fetchActivitiesFromPolymarket, type Activity } from '../services/polymarketDirect';
@@ -23,11 +24,17 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [roomName, setRoomName] = useState('');
+  const [description, setDescription] = useState('');
+  const [twitterLink, setTwitterLink] = useState('');
+  const [telegramLink, setTelegramLink] = useState('');
+  const [discordLink, setDiscordLink] = useState('');
   const [creating, setCreating] = useState(false);
   const [activeTab, setActiveTab] = useState<'rooms' | 'feed'>('rooms');
   const [globalActivities, setGlobalActivities] = useState<Activity[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmRoom, setDeleteConfirmRoom] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     loadRooms();
@@ -39,7 +46,7 @@ export default function Dashboard() {
     }
   }, [activeTab]);
 
-  const loadRooms = async () => {
+  const loadRooms = useCallback(async () => {
     try {
       const data = await roomService.getRooms();
       setRooms(data);
@@ -48,15 +55,19 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setCreating(true);
     try {
-      await roomService.createRoom(roomName);
+      await roomService.createRoom(roomName, description, twitterLink, telegramLink, discordLink);
       setRoomName('');
+      setDescription('');
+      setTwitterLink('');
+      setTelegramLink('');
+      setDiscordLink('');
       setShowModal(false);
       loadRooms();
     } catch (error) {
@@ -67,15 +78,25 @@ export default function Dashboard() {
     }
   };
 
-  const handleDeleteRoom = async (id: string) => {
-    if (!confirm(t('common.confirm_delete', { defaultValue: 'Are you sure you want to delete this room? This cannot be undone.' }))) return;
+  const handleDeleteRoom = useCallback((id: string, name: string) => {
+    // Show custom confirmation modal
+    setDeleteConfirmRoom({ id, name });
+  }, []);
+
+  const confirmDeleteRoom = useCallback(async () => {
+    if (!deleteConfirmRoom) return;
+
+    setIsDeleting(true);
     try {
-      await roomService.deleteRoom(id);
+      await roomService.deleteRoom(deleteConfirmRoom.id);
+      setDeleteConfirmRoom(null);
       loadRooms();
     } catch (error) {
       console.error('Failed to delete room:', error);
+    } finally {
+      setIsDeleting(false);
     }
-  };
+  }, [deleteConfirmRoom, loadRooms]);
 
   const loadGlobalFeed = async () => {
     setFeedLoading(true);
@@ -175,7 +196,8 @@ export default function Dashboard() {
                 key={room.id}
                 room={room}
                 showActions
-                onDelete={handleDeleteRoom}
+                onDelete={(id) => handleDeleteRoom(id, room.name)}
+                isDeleting={isDeleting}
               />
             ))}
 
@@ -282,9 +304,6 @@ export default function Dashboard() {
         }
       >
         <div className="space-y-6">
-          <p className="text-[11px] text-foreground/40 uppercase tracking-widest font-bold leading-relaxed">
-            {t('dashboard.modal_subtitle')}
-          </p>
           <Input
             label={t('dashboard.modal_label')}
             value={roomName}
@@ -294,6 +313,74 @@ export default function Dashboard() {
             disabled={creating}
             error={error}
           />
+          <TextArea
+            label={t('dashboard.description_label')}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={t('dashboard.description_placeholder')}
+            disabled={creating}
+            rows={4}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Input
+              label={t('dashboard.twitter_label')}
+              value={twitterLink}
+              onChange={(e) => setTwitterLink(e.target.value)}
+              placeholder="https://x.com/..."
+              disabled={creating}
+            />
+            <Input
+              label={t('dashboard.telegram_label')}
+              value={telegramLink}
+              onChange={(e) => setTelegramLink(e.target.value)}
+              placeholder="https://t.me/..."
+              disabled={creating}
+            />
+            <Input
+              label={t('dashboard.discord_label')}
+              value={discordLink}
+              onChange={(e) => setDiscordLink(e.target.value)}
+              placeholder="https://discord.gg/..."
+              disabled={creating}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteConfirmRoom !== null}
+        onClose={() => !isDeleting && setDeleteConfirmRoom(null)}
+        title={t('dashboard.delete_confirm_title', { defaultValue: 'Delete Room' })}
+        footer={
+          <div className="flex gap-3 w-full">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmRoom(null)}
+              disabled={isDeleting}
+              className="flex-1"
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={confirmDeleteRoom}
+              disabled={isDeleting}
+              isLoading={isDeleting}
+              variant="danger"
+              className="flex-1"
+            >
+              {t('common.delete')}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-foreground/70">
+            {t('dashboard.delete_confirm_message', {
+              defaultValue: 'Are you sure you want to delete "{{roomName}}"? This action cannot be undone.',
+              roomName: deleteConfirmRoom?.name
+            })}
+          </p>
         </div>
       </Modal>
     </div>
