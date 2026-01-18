@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Helmet } from 'react-helmet-async';
 import { useTranslate } from '../hooks/useTranslate';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/ui/Button';
@@ -278,7 +279,24 @@ export default function Feed() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 relative animate-fade-in">
+    <>
+      <Helmet>
+        <title>智能钱交易动态 | Oddslab - Polymarket 交易追踪</title>
+        <meta name="description" content="追踪所有房间的智能钱交易动态，实时查看顶级交易者在 Polymarket 的买卖行为和持仓数据。通过地址筛选功能快速定位感兴趣的交易者。" />
+        <meta property="og:title" content="智能钱交易动态 | Oddslab" />
+        <meta property="og:description" content="追踪所有房间的智能钱交易动态，实时查看顶级交易者在 Polymarket 的买卖行为和持仓数据。" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://oddslab.com/feed" />
+        <meta property="og:image" content="https://oddslab.com/og-image.png" />
+        <meta property="og:site_name" content="Oddslab" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://oddslab.com/feed" />
+        <meta name="twitter:title" content="智能钱交易动态 | Oddslab" />
+        <meta name="twitter:description" content="追踪所有房间的智能钱交易动态，实时查看顶级交易者在 Polymarket 的买卖行为和持仓数据。" />
+        <meta name="twitter:image" content="https://oddslab.com/og-image.png" />
+        <link rel="canonical" href="https://oddslab.com/feed" />
+      </Helmet>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 relative animate-fade-in">
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-12 border-l-4 border-neon-cyan pl-6 py-2">
         <div className="space-y-1">
@@ -577,5 +595,6 @@ export default function Feed() {
         </div>
       )}
     </div>
+    </>
   );
 }

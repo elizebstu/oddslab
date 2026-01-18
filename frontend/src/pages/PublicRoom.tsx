@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Helmet } from 'react-helmet-async';
 import { useTranslate } from '../hooks/useTranslate';
 import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -386,7 +387,26 @@ export default function PublicRoom() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+    <>
+      {room && (
+        <Helmet>
+          <title>{room.name} - Oddslab | Polymarket 智能钱追踪</title>
+          <meta name="description" content={`在 ${room.name} 房间追踪 ${addresses.length} 个智能钱地址的实时 Polymarket 交易活动和持仓数据。${room.description ? ` - ${room.description}` : ''}`} />
+          <meta property="og:title" content={`${room.name} - Oddslab`} />
+          <meta property="og:description" content={`在 ${room.name} 房间追踪 ${addresses.length} 个智能钱地址的实时 Polymarket 交易活动和持仓数据。`} />
+          <meta property="og:type" content="website" />
+          <meta property="og:url" content={`https://oddslab.com/public/${id}`} />
+          <meta property="og:image" content="https://oddslab.com/og-image.png" />
+          <meta property="og:site_name" content="Oddslab" />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:url" content={`https://oddslab.com/public/${id}`} />
+          <meta name="twitter:title" content={`${room.name} - Oddslab`} />
+          <meta name="twitter:description" content={`在 ${room.name} 房间追踪 ${addresses.length} 个智能钱地址的实时 Polymarket 交易活动和持仓数据。`} />
+          <meta name="twitter:image" content="https://oddslab.com/og-image.png" />
+          <link rel="canonical" href={`https://oddslab.com/public/${id}`} />
+        </Helmet>
+      )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
       {/* Header */}
       <div className="mb-16 animate-fade-in border-l-4 border-neon-green pl-6 py-2">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
@@ -717,5 +737,6 @@ export default function PublicRoom() {
           </Card>
       </div>
     </div>
+    </>
   );
 }

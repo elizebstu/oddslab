@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Helmet } from 'react-helmet-async';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/ui/Button';
 import RoomCard from '../components/RoomCard';
@@ -60,7 +61,24 @@ export default function Explore() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 animate-fade-in">
+    <>
+      <Helmet>
+        <title>探索公开房间 | Oddslab - 追踪 Polymarket 智能钱</title>
+        <meta name="description" content="浏览 Oddslab 平台上的所有公开监控房间，发现智能钱交易者的 Polymarket 交易策略和持仓数据。复制成功的投资组合。" />
+        <meta property="og:title" content="探索公开房间 | Oddslab" />
+        <meta property="og:description" content="浏览 Oddslab 平台上的所有公开监控房间，发现智能钱交易者的 Polymarket 交易策略和持仓数据。" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://oddslab.com/explore" />
+        <meta property="og:image" content="https://oddslab.com/og-image.png" />
+        <meta property="og:site_name" content="Oddslab" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://oddslab.com/explore" />
+        <meta name="twitter:title" content="探索公开房间 | Oddslab" />
+        <meta name="twitter:description" content="浏览 Oddslab 平台上的所有公开监控房间，发现智能钱交易者的 Polymarket 交易策略和持仓数据。" />
+        <meta name="twitter:image" content="https://oddslab.com/og-image.png" />
+        <link rel="canonical" href="https://oddslab.com/explore" />
+      </Helmet>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 animate-fade-in">
       {/* Header */}
       <div className="mb-16 text-center max-w-2xl mx-auto space-y-6">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-neon-cyan/10 border border-neon-cyan/20 skew-x-[-6deg]">
@@ -132,5 +150,6 @@ export default function Explore() {
         </div>
       )}
     </div>
+    </>
   );
 }
