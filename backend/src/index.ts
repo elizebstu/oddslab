@@ -1,11 +1,12 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { config, isDevelopment } from './config/config';
 import { logger } from './utils/logger';
+import { resolve } from 'path';
 import authRoutes from './routes/auth';
 import otpRoutes from './routes/otp';
 import roomRoutes from './routes/rooms';
-import addressRoutes from './routes/addresses';
+import addressRoutes from './routes/addressRoutes';
 import postRoutes from './routes/posts';
 import sitemapRoutes from './routes/sitemap';
 
@@ -24,8 +25,21 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api/addresses', addressRoutes);
 app.use('/api', postRoutes);
 
-// Public sitemap (no auth required)
+// Public sitemap and robots (no auth required)
 app.use('/sitemap.xml', sitemapRoutes);
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(`User-agent: *
+Allow: /explore
+Allow: /public/
+
+Disallow: /dashboard
+Disallow: /rooms
+Disallow: /login
+Disallow: /register
+Disallow: /api/
+
+Sitemap: https://oddslab.com/sitemap.xml`);
+});
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   logger.error('Unhandled error', err);

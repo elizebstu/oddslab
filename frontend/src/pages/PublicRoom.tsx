@@ -404,6 +404,37 @@ export default function PublicRoom() {
           <meta name="twitter:description" content={`在 ${room.name} 房间追踪 ${addresses.length} 个智能钱地址的实时 Polymarket 交易活动和持仓数据。`} />
           <meta name="twitter:image" content="https://oddslab.com/og-image.png" />
           <link rel="canonical" href={`https://oddslab.com/public/${id}`} />
+
+          {/* Structured Data - JSON-LD */}
+          <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "name": `${room.name} - Polymarket 智能钱追踪`,
+            "description": room.description || `在 ${room.name} 房间追踪 ${addresses.length} 个智能钱地址的实时 Polymarket 交易活动和持仓数据。`,
+            "url": `https://oddslab.com/public/${id}`,
+            "inLanguage": "zh-CN",
+            "about": {
+              "@type": "Organization",
+              "name": "Oddslab",
+              "url": "https://oddslab.com",
+              "logo": "https://oddslab.com/logo.png"
+            },
+            "hasPart": {
+              "@type": "ItemList",
+              "numberOfItems": addresses.length,
+              "itemListElement": addresses.map((addr, index) => ({
+                "@type": "ListItem",
+                "position": index + 1,
+                "item": {
+                  "@type": "Person",
+                  "name": addr.userName || formatAddress(addr.address),
+                  "identifier": addr.address
+                }
+              }))
+            }
+          })}
+          </script>
         </Helmet>
       )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
