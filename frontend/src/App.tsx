@@ -6,7 +6,10 @@ import Home from './pages/Home';
 import Explore from './pages/Explore';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import OtpLogin from './pages/OtpLogin';
+import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
+import Feed from './pages/Feed';
 import RoomDetail from './pages/RoomDetail';
 import PublicRoom from './pages/PublicRoom';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -24,7 +27,10 @@ function AppRoutes() {
       <Route path="/explore" element={<Layout><Explore /></Layout>} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Layout showNavbar={false} showFooter={false}><Login /></Layout>} />
       <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Layout showNavbar={false} showFooter={false}><Register /></Layout>} />
+      <Route path="/otp-login" element={user ? <Navigate to="/dashboard" /> : <Layout showNavbar={false} showFooter={false}><OtpLogin /></Layout>} />
+      <Route path="/forgot-password" element={user ? <Navigate to="/dashboard" /> : <Layout showNavbar={false} showFooter={false}><ForgotPassword /></Layout>} />
       <Route path="/dashboard" element={user ? <Layout><Dashboard /></Layout> : <Navigate to="/login" />} />
+      <Route path="/feed" element={user ? <Layout><Feed /></Layout> : <Navigate to="/login" />} />
       <Route path="/rooms/:id" element={user ? <Layout><RoomDetail /></Layout> : <Navigate to="/login" />} />
       <Route path="/public/:id" element={<Layout><PublicRoom /></Layout>} />
     </Routes>

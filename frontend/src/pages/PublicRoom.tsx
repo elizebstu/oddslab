@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Helmet } from 'react-helmet-async';
 import { useTranslate } from '../hooks/useTranslate';
 import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import Linkify from '../components/ui/Linkify';
+import RoomSocialLinks from '../components/RoomSocialLinks';
 import { roomService } from '../services/roomService';
 import { addressService } from '../services/addressService';
 import {
@@ -24,7 +27,6 @@ function MarketTitle({ text }: { text: string }) {
   return <>{translated}</>;
 }
 
-type Tab = 'positions' | 'activity';
 const AUTO_REFRESH_INTERVAL = 120000; // 2 minutes
 
 // Helper to get blocked addresses from localStorage
@@ -160,11 +162,11 @@ export default function PublicRoom() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<Tab>('positions');
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showWallets, setShowWallets] = useState(false);
+  const [showPositions, setShowPositions] = useState(false);
   const [minVolume, setMinVolume] = useState<string>('');
   const [maxVolume, setMaxVolume] = useState<string>('');
   const [blockedAddresses, setBlockedAddresses] = useState<Set<string>>(new Set());
@@ -172,6 +174,7 @@ export default function PublicRoom() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const refreshTimerRef = useRef<number | null>(null);
   const walletsRef = useRef<HTMLDivElement>(null);
+  const positionsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const toggleGroupExpanded = (key: string) => {
@@ -189,11 +192,14 @@ export default function PublicRoom() {
   // Check if current user is the owner
   const isOwner = user && room && user.id === room.userId;
 
-  // Close wallets panel when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (walletsRef.current && !walletsRef.current.contains(event.target as Node)) {
         setShowWallets(false);
+      }
+      if (positionsRef.current && !positionsRef.current.contains(event.target as Node)) {
+        setShowPositions(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -383,7 +389,57 @@ export default function PublicRoom() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+    <>
+      {room && (
+        <Helmet>
+          <title>{room.name} - Oddslab | Polymarket 智能钱追踪</title>
+          <meta name="description" content={`在 ${room.name} 房间追踪 ${addresses.length} 个智能钱地址的实时 Polymarket 交易活动和持仓数据。${room.description ? ` - ${room.description}` : ''}`} />
+          <meta property="og:title" content={`${room.name} - Oddslab`} />
+          <meta property="og:description" content={`在 ${room.name} 房间追踪 ${addresses.length} 个智能钱地址的实时 Polymarket 交易活动和持仓数据。`} />
+          <meta property="og:type" content="website" />
+          <meta property="og:url" content={`https://oddslab.com/public/${id}`} />
+          <meta property="og:image" content="https://oddslab.com/og-image.png" />
+          <meta property="og:site_name" content="Oddslab" />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:url" content={`https://oddslab.com/public/${id}`} />
+          <meta name="twitter:title" content={`${room.name} - Oddslab`} />
+          <meta name="twitter:description" content={`在 ${room.name} 房间追踪 ${addresses.length} 个智能钱地址的实时 Polymarket 交易活动和持仓数据。`} />
+          <meta name="twitter:image" content="https://oddslab.com/og-image.png" />
+          <link rel="canonical" href={`https://oddslab.com/public/${id}`} />
+
+          {/* Structured Data - JSON-LD */}
+          <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "name": `${room.name} - Polymarket 智能钱追踪`,
+            "description": room.description || `在 ${room.name} 房间追踪 ${addresses.length} 个智能钱地址的实时 Polymarket 交易活动和持仓数据。`,
+            "url": `https://oddslab.com/public/${id}`,
+            "inLanguage": "zh-CN",
+            "about": {
+              "@type": "Organization",
+              "name": "Oddslab",
+              "url": "https://oddslab.com",
+              "logo": "https://oddslab.com/logo.png"
+            },
+            "hasPart": {
+              "@type": "ItemList",
+              "numberOfItems": addresses.length,
+              "itemListElement": addresses.map((addr, index) => ({
+                "@type": "ListItem",
+                "position": index + 1,
+                "item": {
+                  "@type": "Person",
+                  "name": addr.userName || formatAddress(addr.address),
+                  "identifier": addr.address
+                }
+              }))
+            }
+          })}
+          </script>
+        </Helmet>
+      )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
       {/* Header */}
       <div className="mb-16 animate-fade-in border-l-4 border-neon-green pl-6 py-2">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
@@ -394,12 +450,81 @@ export default function PublicRoom() {
               </div>
             </div>
             <h1 className="text-5xl font-display font-black uppercase tracking-tighter italic text-white">{room.name}</h1>
+            {room.description && (
+              <div className="text-sm text-white/60 leading-relaxed max-w-2xl">
+                <Linkify>{room.description}</Linkify>
+              </div>
+            )}
+            {/* Social Links */}
+            <RoomSocialLinks
+              twitterLink={room.twitterLink}
+              telegramLink={room.telegramLink}
+              discordLink={room.discordLink}
+            />
             <p className="text-sm font-bold text-white/40 uppercase tracking-widest leading-none">
               {t('room_detail.monitoring_targets_public', { count: addresses.length || room.addresses?.length || 0 })}
             </p>
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Collapsible Positions Dropdown */}
+            <div className="relative" ref={positionsRef}>
+              <button
+                onClick={() => setShowPositions(!showPositions)}
+                className={`flex items-center gap-2 px-4 py-2.5 border text-[10px] font-black uppercase tracking-widest transition-all ${
+                  showPositions
+                    ? 'bg-neon-green text-midnight-950 border-neon-green'
+                    : 'bg-midnight-900 text-white/60 border-white/10 hover:border-neon-green hover:text-neon-green'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span>{t('room_detail.active_stakes')}</span>
+                <span className="px-1.5 py-0.5 bg-white/10 text-[8px]">{positions.length}</span>
+                <svg className={`w-3 h-3 transition-transform ${showPositions ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Positions Dropdown Panel */}
+              {showPositions && (
+                <div className="absolute left-0 top-full mt-2 w-[500px] bg-midnight-900 border border-white/10 shadow-2xl z-50 animate-fade-in">
+                  <div className="p-4 border-b border-white/5">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-white/60">
+                      {t('room_detail.active_stakes')}
+                    </h3>
+                  </div>
+                  <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-4 space-y-3">
+                    {positions.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <p className="text-sm font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.zero_stakes')}</p>
+                      </div>
+                    ) : (
+                      positions.map((pos, idx) => {
+                        const badge = getRankBadge(idx);
+                        return (
+                          <div key={idx} className="p-4 bg-midnight-950 border border-white/5 hover:border-neon-green/50 transition-all">
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                {badge && <span className="text-lg">{badge.emoji}</span>}
+                                <h4 className="text-sm font-black text-white uppercase tracking-tighter truncate">
+                                  <MarketTitle text={pos.market} />
+                                </h4>
+                              </div>
+                              <div className="text-xl font-mono font-black text-neon-green">
+                                ${pos.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Collapsible Wallet Sources Button */}
             <div className="relative" ref={walletsRef}>
               <button
@@ -519,27 +644,6 @@ export default function PublicRoom() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 bg-midnight-950 p-2 border-b border-white/5">
-              <button
-                onClick={() => setActiveTab('positions')}
-                className={`flex items-center justify-center gap-3 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all skew-x-[-12deg] ${activeTab === 'positions'
-                  ? 'bg-neon-green text-midnight-950 shadow-neon-green'
-                  : 'text-white/40 hover:text-white hover:bg-white/5'
-                  }`}
-              >
-                <span className="skew-x-[12deg]">{t('room_detail.active_stakes')}</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('activity')}
-                className={`flex items-center justify-center gap-3 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all skew-x-[-12deg] ${activeTab === 'activity'
-                  ? 'bg-neon-cyan text-midnight-950 shadow-neon-cyan'
-                  : 'text-white/40 hover:text-white hover:bg-white/5'
-                  }`}
-              >
-                <span className="skew-x-[12deg]">{t('room_detail.recent_flux')}</span>
-              </button>
-            </div>
-
             <div className="p-8 min-h-[400px]">
               {/* Filter controls - shared between tabs */}
               <div className="flex items-center gap-4 mb-6 p-4 bg-midnight-950/50 border border-white/5">
@@ -570,95 +674,7 @@ export default function PublicRoom() {
                 )}
               </div>
 
-              {activeTab === 'positions' ? (
-                <div className="space-y-6">
-                  {positions.length === 0 ? (
-                    <div className="py-24 text-center">
-                      <p className="text-lg font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.zero_stakes')}</p>
-                    </div>
-                  ) : (
-                    positions
-                      .map((pos) => ({
-                        ...pos,
-                        holders: pos.holders?.filter(h => !blockedAddresses.has(h.address.toLowerCase()))
-                      }))
-                      .filter((pos) => pos.holders && pos.holders.length > 0)
-                      .filter((pos) => {
-                        const min = minVolume ? parseFloat(minVolume) : 0;
-                        const max = maxVolume ? parseFloat(maxVolume) : Infinity;
-                        return pos.totalValue >= min && pos.totalValue <= max;
-                      })
-                      .map((pos, idx) => {
-                      const badge = getRankBadge(idx);
-                      // Try slug first, then conditionId, then search
-                      let polymarketUrl: string;
-                      if (pos.marketSlug) {
-                        polymarketUrl = `https://polymarket.com/event/${pos.marketSlug}`;
-                      } else if (pos.conditionId) {
-                        polymarketUrl = `https://polymarket.com/event?id=${pos.conditionId}`;
-                      } else {
-                        polymarketUrl = `https://polymarket.com/markets?_q=${encodeURIComponent(pos.market)}`;
-                      }
-                      return (
-                        <div key={idx} className="group relative p-8 bg-midnight-950 border border-white/5 hover:border-neon-green/50 transition-all">
-                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-                            <div className="flex-1 min-w-0 space-y-4">
-                              <div className="flex items-center gap-3">
-                                {badge && <span className="text-2xl">{badge.emoji}</span>}
-                                <h3 className="text-xl font-black text-white group-hover:text-neon-green transition-colors leading-[0.9] uppercase tracking-tighter">
-                                  <MarketTitle text={pos.market} />
-                                </h3>
-                                {/* Polymarket link button */}
-                                <a
-                                  href={polymarketUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="p-1.5 text-white/20 hover:text-neon-cyan transition-all opacity-0 group-hover:opacity-100"
-                                  title={t('room_detail.view_on_polymarket', { defaultValue: 'View on Polymarket' })}
-                                >
-                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                  </svg>
-                                </a>
-                              </div>
-                              <div className="flex items-center gap-4">
-                                <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${pos.outcome.toLowerCase() === 'yes' ? 'bg-neon-green/20 text-neon-green border border-neon-green/30' : 'bg-neon-red/20 text-neon-red border border-neon-red/30'
-                                  }`}>
-                                  {pos.outcome.toLowerCase() === 'yes' ? t('common.yes') : t('common.no')}
-                                </span>
-                                <div className="flex items-center gap-2 text-[10px] font-black text-white/30 tracking-widest uppercase truncate max-w-[150px]">
-                                  <span className="text-white">{pos.totalShares.toLocaleString()}</span> {t('room_detail.shares')}
-                                </div>
-                              </div>
-                              {/* Show holders */}
-                              {pos.holders && pos.holders.length > 0 && (
-                                <div className="flex flex-wrap items-center gap-2 mt-3">
-                                  <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">{t('room_detail.held_by')}</span>
-                                  {pos.holders.map((holder, hIdx) => (
-                                    <span
-                                      key={hIdx}
-                                      className="px-2 py-1 text-[9px] font-bold bg-midnight-800 border border-white/10 text-neon-cyan truncate max-w-[120px]"
-                                      title={`${holder.userName || formatAddress(holder.address)} - ${holder.shares.toLocaleString()} shares ($${holder.value.toLocaleString()})`}
-                                    >
-                                      {holder.userName || formatAddress(holder.address)}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex items-center md:flex-col md:items-end gap-6 md:gap-2">
-                              <div className="text-3xl font-mono font-black text-white tracking-tighter">
-                                ${pos.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }))}
-                </div>
-              ) : (
-                <div className="space-y-6 font-mono">
+              <div className="space-y-6 font-mono">
                   {activities.length === 0 ? (
                     <div className="py-24 text-center">
                       <p className="text-lg font-black text-white/20 uppercase italic tracking-tighter">{t('room_detail.stream_static')}</p>
@@ -761,10 +777,10 @@ export default function PublicRoom() {
                       })
                     )}
                 </div>
-              )}
             </div>
           </Card>
       </div>
     </div>
+    </>
   );
 }

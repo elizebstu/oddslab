@@ -1,11 +1,14 @@
 import { createContext, useState, useEffect, type ReactNode } from 'react';
 import { authService } from '../services/authService';
+import { otpService } from '../services/otpService';
 import type { User } from '../services/authService';
+import type { AuthResponse } from '../services/authService';
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithOtp: (email: string, code: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -33,6 +36,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(user);
   };
 
+  const loginWithOtp = async (email: string, code: string) => {
+    const response: AuthResponse = await otpService.loginWithOtp(email, code);
+    localStorage.setItem('token', response.token);
+    localStorage.setItem('user', JSON.stringify(response.user));
+    setUser(response.user);
+  };
+
   const register = async (email: string, password: string) => {
     const { token, user } = await authService.register(email, password);
     localStorage.setItem('token', token);
@@ -47,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithOtp, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

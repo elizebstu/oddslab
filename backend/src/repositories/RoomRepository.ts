@@ -1,0 +1,66 @@
+import { PrismaClient, Prisma } from '@prisma/client';
+import type { IRoomRepository } from './interfaces/IRoomRepository';
+
+export class RoomRepository implements IRoomRepository {
+  constructor(private prisma: PrismaClient) {}
+
+  async findById(id: string) {
+    return this.prisma.room.findUnique({
+      where: { id },
+      include: { addresses: true },
+    });
+  }
+
+  async findByUser(userId: string) {
+    return this.prisma.room.findMany({
+      where: { userId },
+      include: { addresses: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findPublic() {
+    return this.prisma.room.findMany({
+      where: { isPublic: true },
+      include: { addresses: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
+
+  async create(data: Prisma.RoomUncheckedCreateInput) {
+    return this.prisma.room.create({
+      data,
+      include: { addresses: true },
+    });
+  }
+
+  async update(id: string, data: Prisma.RoomUpdateInput) {
+    return this.prisma.room.update({
+      where: { id },
+      data,
+      include: { addresses: true },
+    });
+  }
+
+  async delete(id: string) {
+    return this.prisma.room.delete({ where: { id } });
+  }
+
+  async toggleVisibility(id: string) {
+    const room = await this.prisma.room.findUnique({ where: { id } });
+    if (!room) return null;
+    return this.prisma.room.update({
+      where: { id },
+      data: { isPublic: !room.isPublic },
+      include: { addresses: true },
+    });
+  }
+
+  async belongsToUser(roomId: string, userId: string): Promise<boolean> {
+    const room = await this.prisma.room.findUnique({
+      where: { id: roomId },
+      select: { userId: true },
+    });
+    return room?.userId === userId;
+  }
+}

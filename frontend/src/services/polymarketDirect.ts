@@ -74,58 +74,81 @@ const profileNameCache = new Map<string, string>();
 export const fetchActivitiesFromPolymarket = async (addresses: string[]): Promise<Activity[]> => {
   const allActivities: Activity[] = [];
   const oneDayAgo = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
+  const batchSize = 3; // Reduced batch size to avoid rate limiting
 
-  for (const address of addresses) {
-    try {
-      const response = await axios.get<PolymarketActivity[]>(`${POLYMARKET_DATA_API}/activity`, {
-        params: {
-          user: address.toLowerCase(),
-          limit: 500,
-        },
-        timeout: 15000,
-      });
+  // Add delay between batches
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-      if (response.data && Array.isArray(response.data)) {
-        const activities = response.data.filter((a) => a.timestamp >= oneDayAgo);
+  // Process addresses in batches to avoid rate limiting
+  for (let i = 0; i < addresses.length; i += batchSize) {
+    const batch = addresses.slice(i, i + batchSize);
 
-        for (const activity of activities) {
-          let type: Activity['type'];
-          if (activity.type === 'TRADE' && activity.side) {
-            type = activity.side === 'BUY' ? 'buy' : 'sell';
-          } else if (activity.type === 'REDEEM') {
-            type = 'redeem';
-          } else {
-            type = 'buy';
-          }
+    const promises = batch.map(async (address) => {
+      try {
+        const response = await axios.get<PolymarketActivity[]>(`${POLYMARKET_DATA_API}/activity`, {
+          params: {
+            user: address.toLowerCase(),
+            limit: 500, // Increased limit to show more activities
+          },
+          timeout: 10000,
+        });
 
-          const displayName = activity.name || activity.pseudonym;
-          if (displayName) {
-            profileNameCache.set(address.toLowerCase(), displayName);
-          }
+        if (response.data && Array.isArray(response.data)) {
+          const activities = response.data.filter((a) => a.timestamp >= oneDayAgo);
 
-          allActivities.push({
-            address,
-            type,
-            market: activity.title,
-            amount: Math.round(activity.usdcSize * 100) / 100,
-            timestamp: new Date(activity.timestamp * 1000).toISOString(),
-            userName: displayName,
-            outcome: activity.outcome,
-            icon: activity.icon,
-            transactionHash: activity.transactionHash,
-            conditionId: activity.conditionId,
-            marketSlug: activity.slug,
+          const processed = activities.map((activity) => {
+            let type: Activity['type'];
+            if (activity.type === 'TRADE' && activity.side) {
+              type = activity.side === 'BUY' ? 'buy' : 'sell';
+            } else if (activity.type === 'REDEEM') {
+              type = 'redeem';
+            } else {
+              type = 'buy';
+            }
+
+            const displayName = activity.name || activity.pseudonym;
+            if (displayName) {
+              profileNameCache.set(address.toLowerCase(), displayName);
+            }
+
+            return {
+              address,
+              type,
+              market: activity.title,
+              amount: Math.round(activity.usdcSize * 100) / 100,
+              timestamp: new Date(activity.timestamp * 1000).toISOString(),
+              userName: displayName,
+              outcome: activity.outcome,
+              icon: activity.icon,
+              transactionHash: activity.transactionHash,
+              conditionId: activity.conditionId,
+              marketSlug: activity.slug,
+            };
           });
+
+          return processed;
         }
+      } catch (error) {
+        console.warn(`Error fetching activities for ${address}:`, error);
       }
-    } catch (error) {
-      console.error(`Error fetching activities for ${address}:`, error);
+      return [];
+    });
+
+    const batchResults = await Promise.all(promises);
+    batchResults.forEach((results) => {
+      allActivities.push(...results);
+    });
+
+    // Add delay between batches (except for the last batch)
+    if (i + batchSize < addresses.length) {
+      await delay(500);
     }
   }
 
+
   return allActivities.sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  ).slice(0, 100);
+  );
 };
 
 /**
@@ -141,60 +164,83 @@ export const fetchPositionsFromPolymarket = async (addresses: string[]): Promise
     conditionId: string;
   }>();
 
-  for (const address of addresses) {
-    try {
-      const response = await axios.get<PolymarketPosition[]>(`${POLYMARKET_DATA_API}/positions`, {
-        params: {
-          user: address.toLowerCase(),
-        },
-        timeout: 10000,
-      });
+  const batchSize = 3; // Reduced batch size
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-      if (response.data && Array.isArray(response.data)) {
-        const userName = profileNameCache.get(address.toLowerCase());
+  // Process addresses in batches to avoid rate limiting
+  for (let i = 0; i < addresses.length; i += batchSize) {
+    const batch = addresses.slice(i, i + batchSize);
+    const promises = batch.map(async (address) => {
+      try {
+        const response = await axios.get<PolymarketPosition[]>(`${POLYMARKET_DATA_API}/positions`, {
+          params: {
+            user: address.toLowerCase(),
+          },
+          timeout: 10000,
+        });
 
-        for (const position of response.data) {
-          const marketKey = `${position.conditionId}_${position.outcome}`;
-          const currentValue = position.currentValue || 0;
+        if (response.data && Array.isArray(response.data)) {
+          const userName = profileNameCache.get(address.toLowerCase());
 
-          if (allPositions.has(marketKey)) {
-            const existing = allPositions.get(marketKey)!;
-            existing.totalValue += currentValue;
-            existing.totalShares += position.size;
-            existing.holders.set(address.toLowerCase(), {
-              address,
-              userName,
-              shares: position.size,
-              value: currentValue,
-            });
-          } else {
-            const holders = new Map<string, PositionHolder>();
-            holders.set(address.toLowerCase(), {
-              address,
-              userName,
-              shares: position.size,
-              value: currentValue,
-            });
-            allPositions.set(marketKey, {
-              market: position.title,
-              outcome: position.outcome,
-              totalValue: currentValue,
-              totalShares: position.size,
-              holders,
-              conditionId: position.conditionId,
-            });
-          }
+          const processed = response.data.map((position) => ({
+            position,
+            address,
+            userName,
+          }));
+
+          return processed;
         }
+      } catch (error) {
+        console.warn(`Error fetching positions for ${address}:`, error);
       }
-    } catch (error) {
-      console.error(`Error fetching positions for ${address}:`, error);
+      return [];
+    });
+
+    const batchResults = await Promise.all(promises);
+    batchResults.forEach((results) => {
+      results.forEach(({ position, address, userName }) => {
+        const marketKey = `${position.conditionId}_${position.outcome}`;
+        const currentValue = position.currentValue || 0;
+
+        if (allPositions.has(marketKey)) {
+          const existing = allPositions.get(marketKey)!;
+          existing.totalValue += currentValue;
+          existing.totalShares += position.size;
+          existing.holders.set(address.toLowerCase(), {
+            address,
+            userName,
+            shares: position.size,
+            value: currentValue,
+          });
+        } else {
+          const holders = new Map<string, PositionHolder>();
+          holders.set(address.toLowerCase(), {
+            address,
+            userName,
+            shares: position.size,
+            value: currentValue,
+          });
+          allPositions.set(marketKey, {
+            market: position.title,
+            outcome: position.outcome,
+            totalValue: currentValue,
+            totalShares: position.size,
+            holders,
+            conditionId: position.conditionId,
+          });
+        }
+      });
+    });
+
+    // Add delay between batches (except for the last batch)
+    if (i + batchSize < addresses.length) {
+      await delay(500);
     }
   }
 
-  // Get unique conditionIds and fetch their slugs
-  const conditionIds = [...new Set(Array.from(allPositions.values()).map(p => p.conditionId))];
-  const slugs = await fetchMarketSlugs(conditionIds);
 
+  // Return positions without fetching market slugs (to avoid rate limiting)
+  // Market slugs will be fetched separately if needed
   return Array.from(allPositions.values())
     .map((pos) => ({
       market: pos.market,
@@ -203,7 +249,7 @@ export const fetchPositionsFromPolymarket = async (addresses: string[]): Promise
       totalShares: pos.totalShares,
       holders: Array.from(pos.holders.values()),
       conditionId: pos.conditionId,
-      marketSlug: slugs.get(pos.conditionId),
+      marketSlug: undefined,
     }))
     .sort((a, b) => b.totalValue - a.totalValue);
 };
@@ -300,6 +346,7 @@ export const fetchMarketSlug = async (conditionId: string): Promise<string | und
 
 /**
  * Fetch market slugs for multiple conditionIds in batch
+ * NOTE: This function is prone to rate limiting, use sparingly
  */
 export const fetchMarketSlugs = async (conditionIds: string[]): Promise<Map<string, string>> => {
   const results = new Map<string, string>();
@@ -313,16 +360,20 @@ export const fetchMarketSlugs = async (conditionIds: string[]): Promise<Map<stri
     }
   }
 
-  // Fetch uncached IDs (limit concurrent requests)
-  const batchSize = 5;
-  for (let i = 0; i < uncachedIds.length; i += batchSize) {
-    const batch = uncachedIds.slice(i, i + batchSize);
-    await Promise.all(batch.map(async (conditionId) => {
+  // Fetch uncached IDs one at a time with delay to avoid rate limiting
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  for (const conditionId of uncachedIds) {
+    try {
       const slug = await fetchMarketSlug(conditionId);
       if (slug) {
         results.set(conditionId, slug);
+        marketSlugCache.set(conditionId, slug);
       }
-    }));
+      // Add delay between requests to avoid rate limiting
+      await delay(1000);
+    } catch (error) {
+      console.warn(`Skipping market slug for ${conditionId} due to error:`, error);
+    }
   }
 
   return results;

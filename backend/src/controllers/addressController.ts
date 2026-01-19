@@ -1,171 +1,117 @@
 import { Response } from 'express';
+import { AddressService } from '../services/AddressService';
+import { ValidationService, schemas } from '../services/ValidationService';
+import { handleControllerError, sendSuccess, sendSuccessMessage } from '../types/common';
+import type { AuthRequest } from '../middleware/auth';
 import prisma from '../db/prisma';
-import { AuthRequest } from '../middleware/auth';
-import { isValidEthereumAddress } from '../utils/validation';
-import { resolveUsernameToAddress, checkIfBot } from '../services/polymarketService';
-import { fetchProfilesFromActivities, setProfile } from '../services/polymarket/profileCache';
+import { RoomRepository, AddressRepository } from '../repositories';
 
-function isUsername(input: string): boolean {
-  const trimmed = input.trim();
-  return !trimmed.startsWith('0x') && trimmed.length < 42;
+// Lazy initialization functions
+function getAddressService() {
+  const roomRepository = new RoomRepository(prisma);
+  const addressRepository = new AddressRepository(prisma);
+  return new AddressService({ roomRepository, addressRepository });
+}
+
+function getRoomRepository() {
+  return new RoomRepository(prisma);
+}
+
+function getAddressRepository() {
+  return new AddressRepository(prisma);
+}
+
+function getParamId(params: { roomId?: unknown; addressId?: unknown }): { roomId: string; addressId?: string } {
+  const roomId = typeof params.roomId === 'string' ? params.roomId : Array.isArray(params.roomId) ? params.roomId[0] : '';
+  if (!roomId) throw new Error('Invalid roomId parameter');
+
+  const addressId = typeof params.addressId === 'string' ? params.addressId : Array.isArray(params.addressId) ? params.addressId[0] : undefined;
+
+  return { roomId, addressId };
 }
 
 export const addAddresses = async (req: AuthRequest, res: Response) => {
   try {
-    const { roomId } = req.params;
-    const { addresses } = req.body;
+    const { roomId } = getParamId(req.params);
     const userId = req.userId!;
+    const dto = ValidationService.validate(schemas.addAddresses, req.body);
 
-    if (!addresses || !Array.isArray(addresses) || addresses.length === 0) {
-      return res.status(400).json({ error: 'Addresses array is required' });
-    }
+    const addressService = getAddressService();
+    const result = await addressService.addAddressesToRoom(dto.addresses, roomId, userId);
 
-    const room = await prisma.room.findUnique({ where: { id: roomId as string } });
-
-    if (!room) {
-      return res.status(404).json({ error: 'Room not found' });
-    }
-
-    if (room.userId !== userId) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    const resolvedAddresses: string[] = [];
-    const notFound: string[] = [];
-    const botAddresses: string[] = [];
-
-    for (const input of addresses) {
-      const trimmed = input.trim();
-
-      if (!trimmed) continue;
-
-      if (isValidEthereumAddress(trimmed)) {
-        // Check if this address is a bot
-        const botCheck = await checkIfBot(trimmed);
-        if (botCheck && botCheck.isBot) {
-          botAddresses.push(trimmed);
-          continue;
-        }
-        resolvedAddresses.push(trimmed);
-        continue;
-      }
-
-      if (isUsername(trimmed)) {
-        const address = await resolveUsernameToAddress(trimmed);
-        if (address) {
-          // Check if the resolved address is a bot
-          const botCheck = await checkIfBot(address);
-          if (botCheck && botCheck.isBot) {
-            botAddresses.push(trimmed);
-            continue;
-          }
-          resolvedAddresses.push(address);
-        } else {
-          notFound.push(trimmed);
-        }
-      } else {
-        notFound.push(trimmed);
-      }
-    }
-
-    // If any usernames couldn't be resolved, return an error
-    if (notFound.length > 0) {
-      return res.status(400).json({
+    if (result.notFound.length > 0) {
+      res.status(400).json({
         error: 'Could not find Polymarket users',
-        notFound
+        notFound: result.notFound,
       });
+      return;
     }
 
-    // If any addresses are detected as bots, return an error
-    if (botAddresses.length > 0) {
-      return res.status(400).json({
+    if (result.botAddresses.length > 0) {
+      res.status(400).json({
         error: 'Cannot add bot addresses (300+ trades/hour)',
-        botAddresses
+        botAddresses: result.botAddresses,
       });
+      return;
     }
 
-    // All inputs resolved successfully, add to database
-    const createdAddresses = await Promise.all(
-      resolvedAddresses.map(address =>
-        prisma.address.upsert({
-          where: { address_roomId: { address, roomId: roomId as string } },
-          update: {},
-          create: { address, roomId: roomId as string }
-        })
-      )
-    );
-
-    res.status(201).json(createdAddresses);
+    const addressRepository = getAddressRepository();
+    const createdAddresses = await addressRepository.findByRoom(roomId);
+    sendSuccess(res, createdAddresses, 201);
   } catch (error) {
-    console.error('Error adding addresses:', error);
-    res.status(500).json({ error: 'Failed to add addresses' });
+    handleControllerError(res, error);
   }
 };
 
 export const removeAddress = async (req: AuthRequest, res: Response) => {
   try {
-    const { roomId, addressId } = req.params;
+    const { roomId, addressId } = getParamId(req.params);
+    if (!addressId) throw new Error('Invalid addressId parameter');
+
     const userId = req.userId!;
-
-    const room = await prisma.room.findUnique({ where: { id: roomId as string } });
-
-    if (!room) {
-      return res.status(404).json({ error: 'Room not found' });
-    }
-
-    if (room.userId !== userId) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    await prisma.address.delete({ where: { id: addressId as string } });
-
-    res.json({ message: 'Address removed successfully' });
+    const addressService = getAddressService();
+    await addressService.removeAddress(addressId, roomId, userId);
+    sendSuccessMessage(res, 'Address removed successfully');
   } catch (error) {
-    res.status(500).json({ error: 'Failed to remove address' });
+    handleControllerError(res, error);
   }
 };
 
 export const getAddresses = async (req: AuthRequest, res: Response) => {
   try {
-    const { roomId } = req.params;
+    const { roomId } = getParamId(req.params);
+    const addressService = getAddressService();
 
-    const room = await prisma.room.findUnique({
-      where: { id: roomId as string },
-      include: { addresses: true },
-    });
+    // Verify access first
+    await addressService.getAddresses(roomId, req.userId);
 
-    if (!room) {
-      return res.status(404).json({ error: 'Room not found' });
-    }
-
-    if (!room.isPublic && room.userId !== req.userId) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    res.json(room.addresses);
+    // Return full Address objects
+    const addressRepository = getAddressRepository();
+    const addresses = await addressRepository.findByRoom(roomId);
+    sendSuccess(res, addresses);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch addresses' });
+    handleControllerError(res, error);
   }
 };
 
 export const getAddressProfiles = async (req: AuthRequest, res: Response) => {
   try {
-    const { roomId } = req.params;
+    const { roomId } = getParamId(req.params);
+    const roomRepository = getRoomRepository();
 
-    const room = await prisma.room.findUnique({
-      where: { id: roomId as string },
-      include: { addresses: true },
-    });
+    const room = await roomRepository.findById(roomId);
 
     if (!room) {
-      return res.status(404).json({ error: 'Room not found' });
+      res.status(404).json({ error: 'Room not found' });
+      return;
     }
 
     if (!room.isPublic && room.userId !== req.userId) {
-      return res.status(403).json({ error: 'Access denied' });
+      res.status(403).json({ error: 'Access denied' });
+      return;
     }
 
-    // Fetch profiles using Data API activity endpoint (avoids Gamma API ECONNRESET errors)
+    const { fetchProfilesFromActivities } = await import('../services/polymarket/profileCache');
     const addressList = room.addresses.map(a => a.address);
     const profileMap = await fetchProfilesFromActivities(addressList);
 
@@ -177,8 +123,8 @@ export const getAddressProfiles = async (req: AuthRequest, res: Response) => {
       };
     });
 
-    res.json(addressesWithProfiles);
+    sendSuccess(res, addressesWithProfiles);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch address profiles' });
+    handleControllerError(res, error);
   }
 };

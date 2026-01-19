@@ -1,14 +1,18 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import { config, isDevelopment } from './config/config';
+import { logger } from './utils/logger';
+import { resolve } from 'path';
 import authRoutes from './routes/auth';
+import otpRoutes from './routes/otp';
 import roomRoutes from './routes/rooms';
 import addressRoutes from './routes/addresses';
-
-dotenv.config();
+import postRoutes from './routes/posts';
+import sitemapRoutes from './routes/sitemap';
+import onboardingRoutes from './routes/onboarding';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = config.PORT;
 
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*',
@@ -17,14 +21,33 @@ app.use(cors({
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/otp', otpRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api', postRoutes);
+app.use('/api/onboarding', onboardingRoutes);
+
+// Public sitemap and robots (no auth required)
+app.use('/sitemap.xml', sitemapRoutes);
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(`User-agent: *
+Allow: /explore
+Allow: /public/
+
+Disallow: /dashboard
+Disallow: /rooms
+Disallow: /login
+Disallow: /register
+Disallow: /api/
+
+Sitemap: https://oddslab.com/sitemap.xml`);
+});
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
+  logger.error('Unhandled error', err);
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.info(`Server running on port ${PORT} in ${config.NODE_ENV} mode`);
 });

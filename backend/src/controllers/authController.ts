@@ -1,60 +1,35 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { AuthService } from '../services/AuthService';
+import { ValidationService, schemas } from '../services/ValidationService';
+import { handleControllerError, sendSuccess } from '../types/common';
+import type { AuthRequest } from '../middleware/auth';
 import prisma from '../db/prisma';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { UserRepository } from '../repositories';
 
-export const register = async (req: Request, res: Response) => {
+// Lazy initialization function
+function getAuthService() {
+  const userRepository = new UserRepository(prisma);
+  return new AuthService({ userRepository });
+}
+
+export const register = async (req: AuthRequest, res: Response) => {
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-      data: { email, password: hashedPassword },
-    });
-
-    console.log(`[Mock Email] Verification email sent to: ${email}`);
-
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' });
-
-    res.status(201).json({ token, user: { id: user.id, email: user.email } });
+    const dto = ValidationService.validate(schemas.register, req.body);
+    const authService = getAuthService();
+    const result = await authService.register(dto);
+    sendSuccess(res, result, 201);
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed', details: error instanceof Error ? error.message : 'Unknown error' });
+    handleControllerError(res, error);
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: AuthRequest, res: Response) => {
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' });
-
-    res.json({ token, user: { id: user.id, email: user.email } });
+    const dto = ValidationService.validate(schemas.login, req.body);
+    const authService = getAuthService();
+    const result = await authService.login(dto);
+    sendSuccess(res, result);
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed', details: error instanceof Error ? error.message : 'Unknown error' });
+    handleControllerError(res, error);
   }
 };

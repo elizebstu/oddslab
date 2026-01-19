@@ -14,4 +14,24 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Handle wrapped API responses - extract data from { success: true, data: ... }
+api.interceptors.response.use(
+  (response) => {
+    // If response has success and data properties, return the data
+    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
+      if (response.data.success && 'data' in response.data) {
+        response.data = response.data.data;
+      } else if (!response.data.success && 'error' in response.data) {
+        // Error response - throw it
+        throw { response: { data: response.data } };
+      }
+    }
+    return response;
+  },
+  (error) => {
+    // Already an error, just propagate
+    return Promise.reject(error);
+  }
+);
+
 export default api;

@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Helmet } from 'react-helmet-async';
 import LoadingSpinner from '../components/LoadingSpinner';
+import OnboardingTour from '../components/OnboardingTour';
 import Button from '../components/ui/Button';
 import RoomCard from '../components/RoomCard';
 import { roomService } from '../services/roomService';
@@ -60,7 +62,24 @@ export default function Explore() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 animate-fade-in">
+    <>
+      <Helmet>
+        <title>探索公开房间 | Oddslab - 追踪 Polymarket 智能钱</title>
+        <meta name="description" content="浏览 Oddslab 平台上的所有公开监控房间，发现智能钱交易者的 Polymarket 交易策略和持仓数据。复制成功的投资组合。" />
+        <meta property="og:title" content="探索公开房间 | Oddslab" />
+        <meta property="og:description" content="浏览 Oddslab 平台上的所有公开监控房间，发现智能钱交易者的 Polymarket 交易策略和持仓数据。" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://oddslab.com/explore" />
+        <meta property="og:image" content="https://oddslab.com/og-image.png" />
+        <meta property="og:site_name" content="Oddslab" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://oddslab.com/explore" />
+        <meta name="twitter:title" content="探索公开房间 | Oddslab" />
+        <meta name="twitter:description" content="浏览 Oddslab 平台上的所有公开监控房间，发现智能钱交易者的 Polymarket 交易策略和持仓数据。" />
+        <meta name="twitter:image" content="https://oddslab.com/og-image.png" />
+        <link rel="canonical" href="https://oddslab.com/explore" />
+      </Helmet>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 animate-fade-in">
       {/* Header */}
       <div className="mb-16 text-center max-w-2xl mx-auto space-y-6">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-neon-cyan/10 border border-neon-cyan/20 skew-x-[-6deg]">
@@ -77,7 +96,7 @@ export default function Explore() {
 
       {/* Control Bar */}
       <div className="flex flex-col lg:flex-row items-center gap-6 mb-16 bg-card border border-border p-6 skew-x-[-2deg]">
-        <div className="relative flex-1 w-full skew-x-[2deg]">
+        <div className="relative flex-1 w-full skew-x-[2deg] explore-search">
           <svg className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -124,13 +143,18 @@ export default function Explore() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredAndSortedRooms.map((room) => (
-            <RoomCard
-              key={room.id}
-              room={room}
-            />
+            <div key={room.id} className="public-room-card">
+              <RoomCard
+                room={room}
+              />
+            </div>
           ))}
         </div>
       )}
     </div>
+
+    {/* Onboarding Tour */}
+    <OnboardingTour pageName="explore" />
+    </>
   );
 }

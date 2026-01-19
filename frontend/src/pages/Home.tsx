@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Helmet } from 'react-helmet-async';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 
@@ -6,7 +7,24 @@ export default function Home() {
   const { t } = useTranslation();
 
   return (
-    <div className="relative flex flex-col bg-background min-h-screen">
+    <>
+      <Helmet>
+        <title>Oddslab - Track Smart Money on Polymarket | 追踪 Polymarket 智能钱</title>
+        <meta name="description" content="追踪 Polymarket 智能钱地址的实时交易动态和持仓数据。发现顶级交易者策略，复制成功投资组合。Oddslab 帮你追踪智能钱，发现下一个 Polymarket 机会。" />
+        <meta property="og:title" content="Oddslab - Track Smart Money on Polymarket" />
+        <meta property="og:description" content="追踪 Polymarket 智能钱地址的实时交易动态和持仓数据。发现顶级交易者策略，复制成功投资组合。" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://oddslab.com" />
+        <meta property="og:image" content="https://oddslab.com/og-image.png" />
+        <meta property="og:site_name" content="Oddslab" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://oddslab.com" />
+        <meta name="twitter:title" content="Oddslab - Track Smart Money on Polymarket" />
+        <meta name="twitter:description" content="追踪 Polymarket 智能钱地址的实时交易动态和持仓数据。发现顶级交易者策略，复制成功投资组合。" />
+        <meta name="twitter:image" content="https://oddslab.com/og-image.png" />
+        <link rel="canonical" href="https://oddslab.com/" />
+      </Helmet>
+      <div className="relative flex flex-col bg-background min-h-screen">
       {/* PREMIUM HERO SECTION */}
       <section className="relative min-h-[90vh] flex items-center overflow-hidden border-b border-border">
         {/* Dynamic Background Layers */}
@@ -235,5 +253,6 @@ export default function Home() {
         </div>
       </section>
     </div>
+    </>
   );
 }

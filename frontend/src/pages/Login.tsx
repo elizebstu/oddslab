@@ -22,8 +22,14 @@ export default function Login() {
     try {
       await login(email, password);
       navigate('/dashboard');
-    } catch (error) {
-      setError(t('auth.login.error'));
+    } catch (err) {
+      // Extract error message from backend response
+      const errorMessage = (err as any)?.response?.data?.error;
+      if (errorMessage) {
+        setError(errorMessage);
+      } else {
+        setError(t('auth.login.error_default'));
+      }
     } finally {
       setLoading(false);
     }
@@ -87,6 +93,15 @@ export default function Login() {
               {t('auth.login.button')}
             </Button>
           </form>
+
+          <div className="mt-6 flex justify-between text-center">
+            <Link to="/forgot-password" className="text-[10px] font-bold text-white/40 hover:text-neon-cyan transition-colors uppercase tracking-wider">
+              {t('auth.login.forgot_password')}
+            </Link>
+            <Link to="/otp-login" className="text-[10px] font-bold text-white/40 hover:text-neon-cyan transition-colors uppercase tracking-wider">
+              {t('auth.login.otp_login')}
+            </Link>
+          </div>
 
           <div className="mt-8 pt-8 border-t border-white/5 text-center">
             <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
