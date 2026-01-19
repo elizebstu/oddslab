@@ -24,19 +24,12 @@ import {
 } from '../services/polymarketDirect';
 import { getRoomCache, setRoomCache } from '../services/roomCacheService';
 import type { Room, Address } from '../services/roomService';
-import { formatAddress, formatTimestamp, getRankBadge } from '../utils/formatting';
+import { formatTimestamp, getRankBadge } from '../utils/formatting';
 
 // Lazy load heavy PostCard component
 const PostCard = lazy(() => import('../components/PostCard'));
 
 const AUTO_REFRESH_INTERVAL = 120000; // 2 minutes
-
-// Loading fallback for lazy-loaded components
-const POST_CARD_FALLBACK = (
-  <div className="p-8 bg-card border border-border animate-pulse">
-    <div className="h-32 bg-muted animate-pulse rounded" />
-  </div>
-);
 
 // Skeleton loader for posts section
 const POSTS_SKELETON = (
@@ -270,6 +263,10 @@ function RoomDetail({ id: idProp }: RoomDetailProps) {
     if (!addressList.length) return;
 
     try {
+      if (!roomId) {
+        setAddError('Room ID is missing');
+        return;
+      }
       await addressService.addAddresses(roomId, addressList);
       setAddressInput('');
       // Reload room data which includes updated addresses
@@ -617,7 +614,7 @@ function RoomDetail({ id: idProp }: RoomDetailProps) {
               onRemove={handleRemoveAddress}
               copiedAddress={copiedAddress}
               isDeleting={isDeleting}
-              deletingId={deletingId}
+              deletingId={deletingId ?? undefined}
             />
           </Card>
         </div>
@@ -735,8 +732,8 @@ function RoomDetail({ id: idProp }: RoomDetailProps) {
                         key={group.key}
                         group={group}
                         isExpanded={expandedGroups.has(group.key)}
-                        minVolume={minVolume}
-                        maxVolume={maxVolume}
+                        minVolume={minVolume ? parseFloat(minVolume) : undefined}
+                        maxVolume={maxVolume ? parseFloat(maxVolume) : undefined}
                         onToggle={toggleGroupExpanded}
                       />
                     ))

@@ -193,9 +193,6 @@ function OnboardingTour({ pageName, run = true }: OnboardingTourProps) {
       locale={locale}
       disableCloseOnEsc={false}
       disableOverlayClose={false}
-      tooltip={{
-        ...JOYRIDE_STYLES.tooltip,
-      }}
     />
   );
 }

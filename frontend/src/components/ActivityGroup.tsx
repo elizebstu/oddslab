@@ -1,9 +1,7 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ActivityGroup as ActivityGroupType } from '../utils/groupActivities';
-import type { Activity } from '../services/polymarketDirect';
 import ActivityCard from './ActivityCard';
-import { formatTimestamp } from '../utils/formatting';
 
 interface ActivityGroupProps {
   group: ActivityGroupType;
@@ -27,12 +25,12 @@ function ActivityGroup({ group, isExpanded, minVolume, maxVolume, onToggle }: Ac
 
   // Filter based on volume (NOTE: This is already done at parent level, this is a safety check)
   // minVolume and maxVolume can be undefined or number
-  const min = minVolume !== undefined && minVolume !== null && minVolume !== '' ? parseFloat(String(minVolume)) : 0;
-  const max = maxVolume !== undefined && maxVolume !== null && maxVolume !== '' ? parseFloat(String(maxVolume)) : Infinity;
+  const min = minVolume !== undefined && minVolume !== null ? minVolume : 0;
+  const max = maxVolume !== undefined && maxVolume !== null ? maxVolume : Infinity;
   const groupTotal = group.totalBuyAmount + group.totalSellAmount;
 
   // Only filter if there's an actual filter set (min > 0 or max < Infinity)
-  if ((minVolume !== undefined && minVolume !== null && minVolume !== '') || (maxVolume !== undefined && maxVolume !== null && maxVolume !== '')) {
+  if (minVolume !== undefined || maxVolume !== undefined) {
     if (groupTotal < min || groupTotal > max) return null;
   }
 

@@ -158,7 +158,7 @@ export default function Feed() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const loadData = useCallback(async (showLoading = false) => {
+  const loadData = useCallback(async (_showLoading = false) => {
     
     // Step 1: Load from cache immediately (show stale data first)
     const cacheKey = 'feed_data';

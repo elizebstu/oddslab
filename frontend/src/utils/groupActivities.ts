@@ -22,8 +22,11 @@ export function groupActivities(activities: Activity[], positions: Position[]): 
   // Create a position map for O(1) lookups (js-index-maps rule)
   const positionMap = new Map<string, number>();
   for (const pos of positions) {
-    const key = `${pos.market}_${pos.address}`;
-    positionMap.set(key, pos.totalValue);
+    // Each position can have multiple holders, map each holder's address
+    for (const holder of pos.holders) {
+      const key = `${pos.market}_${holder.address}`;
+      positionMap.set(key, holder.value);
+    }
   }
 
   // Group activities by market and address
