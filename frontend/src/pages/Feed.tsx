@@ -314,22 +314,21 @@ export default function Feed() {
         </div>
         <div className="flex items-center gap-4">
           {/* Address Filter Dropdown */}
-          <div className="relative">
+          <div className="relative" ref={null}>
             <button
-              className="address-filter-button flex items-center gap-2 px-4 py-2 border text-[10px] font-black uppercase tracking-widest transition-all"
+              className={`flex items-center gap-2 px-4 py-2.5 border text-[10px] font-black uppercase tracking-widest transition-all ${
+                showAddressFilter
+                  ? 'bg-neon-cyan text-midnight-950 border-neon-cyan'
+                  : 'bg-muted text-foreground/60 border-border hover:border-neon-cyan hover:text-neon-cyan'
+              }`}
               onClick={() => setShowAddressFilter(!showAddressFilter)}
-              style={{
-                background: showAddressFilter ? 'var(--neon-cyan)' : 'var(--muted)',
-                color: showAddressFilter ? 'var(--midnight-950)' : 'var(--foreground/60)',
-                borderColor: showAddressFilter ? 'var(--neon-cyan)' : 'var(--border)',
-              }}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
               </svg>
-              <span>{t('feed.filter_addresses', { defaultValue: 'Filter Addresses' })}</span>
+              <span>{t('feed.filter_addresses')}</span>
               {selectedAddresses.length > 0 && (
-                <span className="px-1.5 py-0.5 bg-white/10 text-[8px]">{selectedAddresses.length}</span>
+                <span className={`px-1.5 py-0.5 text-[8px] ${showAddressFilter ? 'bg-white/10' : 'bg-foreground/10'}`}>{selectedAddresses.length}</span>
               )}
               <svg className={`w-3 h-3 transition-transform ${showAddressFilter ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
@@ -338,16 +337,16 @@ export default function Feed() {
 
             {/* Address Filter Dropdown Panel */}
             {showAddressFilter && (
-              <div className="address-filter-dropdown absolute right-0 top-full mt-2 w-[300px] bg-card border border-border shadow-2xl z-50 animate-fade-in">
+              <div className="address-filter-dropdown absolute right-0 top-full mt-2 w-[320px] bg-card border border-border shadow-2xl z-50 animate-fade-in">
                 <div className="p-4 border-b border-border">
                   <h3 className="text-xs font-black uppercase tracking-widest text-foreground/60">
-                    {t('feed.select_addresses', { defaultValue: 'Select Addresses' })}
+                    {t('feed.select_addresses')}
                   </h3>
                 </div>
                 <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-4 space-y-2">
                   {allAddresses.length === 0 ? (
                     <div className="py-8 text-center">
-                      <p className="text-sm font-black text-foreground/20 uppercase italic tracking-tighter">{t('feed.no_addresses', { defaultValue: 'No addresses to filter' })}</p>
+                      <p className="text-sm font-black text-foreground/20 uppercase italic tracking-tighter">{t('feed.no_addresses')}</p>
                     </div>
                   ) : (
                     allAddresses.map((address) => {
@@ -379,21 +378,19 @@ export default function Feed() {
                     })
                   )}
                 </div>
-                <div className="p-4 border-t border-border">
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      onClick={() => setSelectedAddresses([])}
-                      className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-foreground/60 hover:text-neon-red transition-all"
-                    >
-                      {t('feed.clear_all', { defaultValue: 'Clear All' })}
-                    </button>
-                    <button
-                      onClick={() => setSelectedAddresses(allAddresses)}
-                      className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-foreground/60 hover:text-neon-green transition-all"
-                    >
-                      {t('feed.select_all', { defaultValue: 'Select All' })}
-                    </button>
-                  </div>
+                <div className="p-4 border-t border-border flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => setSelectedAddresses([])}
+                    className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-foreground/60 hover:text-neon-red transition-all"
+                  >
+                    {t('feed.clear_all')}
+                  </button>
+                  <button
+                    onClick={() => setSelectedAddresses(allAddresses)}
+                    className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-foreground/60 hover:text-neon-green transition-all"
+                  >
+                    {t('feed.select_all')}
+                  </button>
                 </div>
               </div>
             )}

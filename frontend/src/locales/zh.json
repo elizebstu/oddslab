@@ -90,7 +90,12 @@
         "total_buys": "总买入",
         "total_sells": "总卖出",
         "current_position": "当前持仓",
-        "transaction_history": "交易历史"
+        "transaction_history": "交易历史",
+        "filter_addresses": "筛选地址",
+        "select_addresses": "选择要显示的地址",
+        "no_addresses": "没有可筛选的地址",
+        "clear_all": "清空",
+        "select_all": "全选"
     },
     "explore": {
         "badge": "公共网络",
@@ -274,6 +279,25 @@
             "h_ago": "{{count}} 小时前",
             "d_ago": "{{count}} 天前"
         }
+    },
+    "post_card": {
+        "owner_post": "群主",
+        "pinned": "置顶",
+        "contains_polymarket_link": "包含 Polymarket 链接",
+        "comments": "评论",
+        "delete": "删除",
+        "confirm_delete": "确定删除这条消息吗？",
+        "delete_comment": "删除评论",
+        "comment_placeholder": "写下你的评论...",
+        "sending": "发送中",
+        "send": "发送"
+    },
+    "post_input": {
+        "placeholder": "分享你的想法... (支持识别链接)",
+        "empty_content": "请输入内容",
+        "error": "发送失败",
+        "sending": "发送中...",
+        "send": "发送"
     },
     "footer": {
         "desc": "为高风险决策提供的高保真情报网络。追踪巨鲸，跟随信号，赢得市场。",
