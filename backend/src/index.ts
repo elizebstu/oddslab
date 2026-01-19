@@ -14,10 +14,38 @@ import onboardingRoutes from './routes/onboarding';
 const app = express();
 const PORT = config.PORT;
 
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+// CORS configuration with support for Vercel preview deployments
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // List of allowed origins and patterns
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://oddslab-cyan.vercel.app',
+    ];
+
+    // Check if origin matches allowed origins or Vercel preview pattern
+    const isAllowed =
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') || // Allow all Vercel preview deployments
+      (isDevelopment && origin.startsWith('http://localhost'));
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      logger.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
-}));
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
