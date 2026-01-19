@@ -1,6 +1,6 @@
-import type { IRoomRepository, IAddressRepository } from '../repositories';
-import type { CreateRoomDto, UpdateRoomDto, RoomWithAddresses } from '../types/dtos';
-import { NotFoundError, ForbiddenError, UnauthorizedError } from '../types/common';
+import type { IRoomRepository, IAddressRepository, RoomWithAddresses } from '../repositories';
+import type { CreateRoomDto, UpdateRoomDto } from '../types/dtos';
+import { NotFoundError, ForbiddenError } from '../types/common';
 import { logger } from '../utils/logger';
 
 export interface RoomServiceDependencies {
@@ -55,13 +55,14 @@ export class RoomService {
       throw new ForbiddenError('You can only edit your own rooms');
     }
 
-    const updatedRoom = await this.deps.roomRepository.update(id, {
-      ...(dto.name !== undefined && { name: dto.name }),
-      ...(dto.description !== undefined && { description: dto.description }),
-      ...(dto.twitterLink !== undefined && { twitterLink: dto.twitterLink || null }),
-      ...(dto.telegramLink !== undefined && { telegramLink: dto.telegramLink || null }),
-      ...(dto.discordLink !== undefined && { discordLink: dto.discordLink || null }),
-    });
+    const updateData: Record<string, unknown> = {};
+    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.description !== undefined) updateData.description = dto.description;
+    if (dto.twitterLink !== undefined) updateData.twitterLink = dto.twitterLink || null;
+    if (dto.telegramLink !== undefined) updateData.telegramLink = dto.telegramLink || null;
+    if (dto.discordLink !== undefined) updateData.discordLink = dto.discordLink || null;
+
+    const updatedRoom = await this.deps.roomRepository.update(id, updateData);
 
     logger.info(`Room updated: ${id} by user: ${userId}`);
 
@@ -97,9 +98,13 @@ export class RoomService {
 
     const updatedRoom = await this.deps.roomRepository.toggleVisibility(id);
 
+    if (!updatedRoom) {
+      throw new NotFoundError('Room');
+    }
+
     logger.info(`Room visibility toggled: ${id} by user: ${userId}`);
 
-    return { ...updatedRoom!, addresses: room.addresses };
+    return { ...updatedRoom, addresses: room.addresses };
   }
 
   async getPublicRooms(): Promise<RoomWithAddresses[]> {

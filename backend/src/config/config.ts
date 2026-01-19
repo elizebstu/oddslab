@@ -1,8 +1,11 @@
+// Load environment variables before validating config
+import './env';
+
 import { z } from 'zod';
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().transform(Number).default('3001'),
+  PORT: z.string().transform(Number).pipe(z.number()).default(3001),
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(1),
   JWT_EXPIRES_IN: z.string().default('7d'),
@@ -14,7 +17,7 @@ function loadConfig(): Env {
   const result = envSchema.safeParse(process.env);
 
   if (!result.success) {
-    const errors = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('\n');
+    const errors = result.error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join('\n');
     throw new Error(`Invalid environment configuration:\n${errors}`);
   }
 

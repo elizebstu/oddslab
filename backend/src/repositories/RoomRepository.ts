@@ -1,17 +1,17 @@
-import { PrismaClient } from '@prisma/client';
-import type { IRoomRepository, RoomWithAddresses, RoomCreateInput, RoomUpdateInput } from './interfaces/IRoomRepository';
+import { PrismaClient, Prisma } from '@prisma/client';
+import type { IRoomRepository } from './interfaces/IRoomRepository';
 
 export class RoomRepository implements IRoomRepository {
   constructor(private prisma: PrismaClient) {}
 
-  async findById(id: string): Promise<RoomWithAddresses | null> {
+  async findById(id: string) {
     return this.prisma.room.findUnique({
       where: { id },
       include: { addresses: true },
     });
   }
 
-  async findByUser(userId: string): Promise<RoomWithAddresses[]> {
+  async findByUser(userId: string) {
     return this.prisma.room.findMany({
       where: { userId },
       include: { addresses: true },
@@ -19,7 +19,7 @@ export class RoomRepository implements IRoomRepository {
     });
   }
 
-  async findPublic(): Promise<RoomWithAddresses[]> {
+  async findPublic() {
     return this.prisma.room.findMany({
       where: { isPublic: true },
       include: { addresses: true },
@@ -27,11 +27,11 @@ export class RoomRepository implements IRoomRepository {
     });
   }
 
-  async create(data: RoomCreateInput) {
+  async create(data: Prisma.RoomUncheckedCreateInput) {
     return this.prisma.room.create({ data });
   }
 
-  async update(id: string, data: RoomUpdateInput) {
+  async update(id: string, data: Prisma.RoomUpdateInput) {
     return this.prisma.room.update({
       where: { id },
       data,

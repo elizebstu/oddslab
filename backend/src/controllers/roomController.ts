@@ -1,164 +1,103 @@
 import { Response } from 'express';
+import { RoomService } from '../services/RoomService';
+import { ValidationService, schemas } from '../services/ValidationService';
+import { handleControllerError, sendSuccess, sendSuccessMessage } from '../types/common';
+import type { AuthRequest } from '../middleware/auth';
 import prisma from '../db/prisma';
-import { AuthRequest } from '../middleware/auth';
+import { RoomRepository, AddressRepository } from '../repositories';
+
+// Lazy initialization function
+function getRoomService() {
+  const roomRepository = new RoomRepository(prisma);
+  const addressRepository = new AddressRepository(prisma);
+  return new RoomService({ roomRepository, addressRepository });
+}
+
+function getParamId(params: { id?: unknown }): string {
+  const id = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : '';
+  if (!id) throw new Error('Invalid id parameter');
+  return id as string;
+}
 
 export const createRoom = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, description, twitterLink, telegramLink, discordLink } = req.body;
+    const sanitized = ValidationService.sanitizeUrls(req.body);
+    const dto = ValidationService.validate(schemas.createRoom, sanitized);
     const userId = req.userId!;
-
-    if (!name) {
-      return res.status(400).json({ error: 'Room name is required' });
-    }
-
-    const room = await prisma.room.create({
-      data: {
-        name,
-        description,
-        twitterLink,
-        telegramLink,
-        discordLink,
-        userId,
-      },
-    });
-
-    res.status(201).json(room);
+    const roomService = getRoomService();
+    const result = await roomService.createRoom(dto, userId);
+    sendSuccess(res, result, 201);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create room' });
+    handleControllerError(res, error);
   }
 };
 
 export const getRooms = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-
-    const rooms = await prisma.room.findMany({
-      where: { userId },
-      include: { addresses: true },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    res.json(rooms);
+    const roomService = getRoomService();
+    const result = await roomService.getRooms(userId);
+    sendSuccess(res, result);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch rooms' });
+    handleControllerError(res, error);
   }
 };
 
 export const getRoom = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
-
-    const room = await prisma.room.findUnique({
-      where: { id: id as string },
-      include: { addresses: true },
-    });
-
-    if (!room) {
-      return res.status(404).json({ error: 'Room not found' });
-    }
-
-    if (!room.isPublic && room.userId !== req.userId) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    res.json(room);
+    const id = getParamId(req.params);
+    const roomService = getRoomService();
+    const result = await roomService.getRoom(id, req.userId);
+    sendSuccess(res, result);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch room' });
+    handleControllerError(res, error);
   }
 };
 
 export const deleteRoom = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = getParamId(req.params);
     const userId = req.userId!;
-
-    const room = await prisma.room.findUnique({ where: { id: id as string } });
-
-    if (!room) {
-      return res.status(404).json({ error: 'Room not found' });
-    }
-
-    if (room.userId !== userId) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    await prisma.room.delete({ where: { id: id as string } });
-
-    res.json({ message: 'Room deleted successfully' });
+    const roomService = getRoomService();
+    await roomService.deleteRoom(id, userId);
+    sendSuccessMessage(res, 'Room deleted successfully');
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete room' });
+    handleControllerError(res, error);
   }
 };
 
 export const toggleVisibility = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = getParamId(req.params);
     const userId = req.userId!;
-
-    const room = await prisma.room.findUnique({ where: { id: id as string } });
-
-    if (!room) {
-      return res.status(404).json({ error: 'Room not found' });
-    }
-
-    if (room.userId !== userId) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    const updatedRoom = await prisma.room.update({
-      where: { id: id as string },
-      data: { isPublic: !room.isPublic },
-    });
-
-    res.json(updatedRoom);
+    const roomService = getRoomService();
+    const result = await roomService.toggleVisibility(id, userId);
+    sendSuccess(res, result);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update room visibility' });
+    handleControllerError(res, error);
   }
 };
 
 export const updateRoom = async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
-    const { name, description, twitterLink, telegramLink, discordLink } = req.body;
+    const id = getParamId(req.params);
+    const sanitized = ValidationService.sanitizeUrls(req.body);
+    const dto = ValidationService.validate(schemas.updateRoom, sanitized);
     const userId = req.userId!;
-
-    const room = await prisma.room.findUnique({ where: { id: id as string } });
-
-    if (!room) {
-      return res.status(404).json({ error: 'Room not found' });
-    }
-
-    if (room.userId !== userId) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    const updatedRoom = await prisma.room.update({
-      where: { id: id as string },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(description !== undefined && { description }),
-        ...(twitterLink !== undefined && { twitterLink }),
-        ...(telegramLink !== undefined && { telegramLink }),
-        ...(discordLink !== undefined && { discordLink }),
-      },
-    });
-
-    res.json(updatedRoom);
+    const roomService = getRoomService();
+    const result = await roomService.updateRoom(id, dto, userId);
+    sendSuccess(res, result);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update room' });
+    handleControllerError(res, error);
   }
 };
 
 export const getPublicRooms = async (req: AuthRequest, res: Response) => {
   try {
-    const rooms = await prisma.room.findMany({
-      where: { isPublic: true },
-      include: { addresses: true },
-      orderBy: { updatedAt: 'desc' },
-    });
-
-    res.json(rooms);
+    const roomService = getRoomService();
+    const result = await roomService.getPublicRooms();
+    sendSuccess(res, result);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch public rooms' });
+    handleControllerError(res, error);
   }
 };
