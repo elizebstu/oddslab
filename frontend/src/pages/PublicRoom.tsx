@@ -7,6 +7,8 @@ import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import Linkify from '../components/ui/Linkify';
+import RoomSocialLinks from '../components/RoomSocialLinks';
 import { roomService } from '../services/roomService';
 import { addressService } from '../services/addressService';
 import {
@@ -448,6 +450,17 @@ export default function PublicRoom() {
               </div>
             </div>
             <h1 className="text-5xl font-display font-black uppercase tracking-tighter italic text-white">{room.name}</h1>
+            {room.description && (
+              <div className="text-sm text-white/60 leading-relaxed max-w-2xl">
+                <Linkify>{room.description}</Linkify>
+              </div>
+            )}
+            {/* Social Links */}
+            <RoomSocialLinks
+              twitterLink={room.twitterLink}
+              telegramLink={room.telegramLink}
+              discordLink={room.discordLink}
+            />
             <p className="text-sm font-bold text-white/40 uppercase tracking-widest leading-none">
               {t('room_detail.monitoring_targets_public', { count: addresses.length || room.addresses?.length || 0 })}
             </p>

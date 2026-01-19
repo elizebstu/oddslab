@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import type { IUserRepository, UserResponse } from './interfaces/IUserRepository';
+import type { IUserRepository } from './interfaces/IUserRepository';
 
 export class UserRepository implements IUserRepository {
   constructor(private prisma: PrismaClient) {}
@@ -27,9 +27,5 @@ export class UserRepository implements IUserRepository {
   async existsByEmail(email: string): Promise<boolean> {
     const user = await this.prisma.user.findUnique({ where: { email }, select: { id: true } });
     return user !== null;
-  }
-
-  toResponse(user: { id: string; email: string }): UserResponse {
-    return { id: user.id, email: user.email };
   }
 }

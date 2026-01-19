@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Helmet } from 'react-helmet-async';
 import { useTranslate } from '../hooks/useTranslate';
-import LoadingSpinner from '../components/LoadingSpinner';
+import OnboardingTour from '../components/OnboardingTour';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { roomService } from '../services/roomService';
@@ -34,6 +34,7 @@ function groupActivities(activities: Activity[], positions: Position[]): Activit
 
   // Group by address + market name (normalized)
   for (const activity of activities) {
+    if (!activity?.address || !activity?.market) continue; // Skip invalid activities
     const marketKey = activity.market.trim().toLowerCase();
     const key = `${activity.address.toLowerCase()}-${marketKey}`;
     const existing = groupMap.get(key) || [];
@@ -119,7 +120,7 @@ export default function Feed() {
   const [rooms, setRooms] = useState<any[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Changed: show UI immediately
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [profileNames, setProfileNames] = useState<Map<string, string>>(new Map());
@@ -158,60 +159,58 @@ export default function Feed() {
   }, []);
 
   const loadData = useCallback(async (showLoading = false) => {
-    console.log('Feed: loadData called, showLoading=', showLoading);
-    if (showLoading) setLoading(true);
-    try {
-      // Check cache first
-      const cacheKey = 'feed_data';
-      const cached = localStorage.getItem(cacheKey);
-      const cacheTime = 60 * 1000; // 1 minute cache
-
-      if (cached) {
+    
+    // Step 1: Load from cache immediately (show stale data first)
+    const cacheKey = 'feed_data';
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
         const { activities, positions, lastUpdated } = JSON.parse(cached);
-        if (Date.now() - lastUpdated < cacheTime) {
-          console.log('Feed: using cached data');
-          setActivities(activities);
-          setPositions(positions);
-          setLoading(false);
-          return;
-        }
+                setActivities(activities);
+        setPositions(positions);
+        setLastRefresh(new Date(lastUpdated));
+        setLoading(false); // Data shown, no longer blocking
+      } catch (e) {
+        console.warn('Feed: failed to parse cache', e);
       }
+    }
 
+    // Step 2: Fetch fresh data in background
+    try {
       const allRooms = await roomService.getRooms();
-      console.log('Feed: rooms loaded:', allRooms);
-      setRooms(allRooms);
+            setRooms(allRooms);
 
       // Aggregate and deduplicate all addresses across all rooms (normalize to lowercase)
       const uniqueAddresses = new Set<string>();
       allRooms.forEach(r => {
         (r.addresses || []).forEach(a => {
-          uniqueAddresses.add(a.address.toLowerCase());
+          if (a?.address) {
+            uniqueAddresses.add(a.address.toLowerCase());
+          }
         });
       });
       const addresses = Array.from(uniqueAddresses);
-      console.log('Feed: deduplicated addresses:', addresses.length, 'total before dedup:', allRooms.reduce((sum, r) => sum + (r.addresses?.length || 0), 0));
-      setAllAddresses(addresses);
+            setAllAddresses(addresses);
 
       if (addresses.length === 0) {
         setActivities([]);
         setPositions([]);
         setLastRefresh(new Date());
-        console.log('Feed: no addresses, returning early');
+                setLoading(false);
         return;
       }
 
-      console.log('Feed: fetching activities and positions...');
-      const [fetchedActivities, fetchedPositions] = await Promise.all([
+            const [fetchedActivities, fetchedPositions] = await Promise.all([
         fetchActivitiesFromPolymarket(addresses),
         fetchPositionsFromPolymarket(addresses)
       ]);
-      console.log('Feed: activities:', fetchedActivities.length, 'positions:', fetchedPositions.length);
-
+      
+      // Update with fresh data
       setActivities(fetchedActivities);
       setPositions(fetchedPositions);
       setLastRefresh(new Date());
 
-      // Cache the data
+      // Update cache
       localStorage.setItem(cacheKey, JSON.stringify({
         activities: fetchedActivities,
         positions: fetchedPositions,
@@ -220,15 +219,13 @@ export default function Feed() {
 
       // Fetch profile names (non-blocking)
       fetchProfileNames(addresses).then(names => {
-        console.log('Feed: profile names loaded:', names.size);
-        setProfileNames(names);
+                setProfileNames(names);
       }).catch(err => {
         console.warn('Feed: failed to load profile names:', err);
       });
     } catch (error) {
       console.error('Feed: Failed to load feed data:', error);
     } finally {
-      console.log('Feed: setting loading to false');
       setLoading(false);
       setIsRefreshing(false);
     }
@@ -237,10 +234,6 @@ export default function Feed() {
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     loadData(false);
-  }, [loadData]);
-
-  useEffect(() => {
-    loadData(true);
   }, [loadData]);
 
   // Auto-refresh every 2 minutes
@@ -274,9 +267,19 @@ export default function Feed() {
     return formatAddress(activity.address);
   };
 
-  if (loading) {
-    return <LoadingSpinner fullScreen text={t('common.loading')} />;
-  }
+  // Skeleton card component
+  const ActivitySkeleton = () => (
+    <div className="p-6 bg-card/50 border border-border animate-pulse">
+      <div className="flex items-center gap-6">
+        <div className="w-12 h-12 bg-muted/30" />
+        <div className="flex-1 space-y-2">
+          <div className="h-4 bg-muted/20 w-1/2" />
+          <div className="h-3 bg-muted/10 w-1/3" />
+        </div>
+        <div className="h-6 bg-muted/20 w-20" />
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -304,7 +307,14 @@ export default function Feed() {
             {t('nav.feed')}<span className="text-neon-cyan glow-text-cyan"></span>
           </h1>
           <div className="flex items-center gap-4 text-foreground/30 text-[10px] font-bold uppercase tracking-[0.2em]">
-            <span>{groupedActivities.length} {t('feed.activity_groups')}</span>
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-neon-cyan rounded-full animate-pulse" />
+                {t('common.loading')}
+              </span>
+            ) : (
+              <span>{groupedActivities.length} {t('feed.activity_groups')}</span>
+            )}
             <span className="w-1 h-1 bg-foreground/10 rounded-full" />
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-pulse" />
@@ -313,37 +323,41 @@ export default function Feed() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {/* Address Filter Dropdown */}
-          <div className="relative" ref={null}>
+          {/* Data Sources Dropdown - Using same style as refresh button */}
+          <div className="relative feed-filters" ref={null}>
             <button
-              className={`flex items-center gap-2 px-4 py-2.5 border text-[10px] font-black uppercase tracking-widest transition-all ${
+              className={`inline-flex items-center justify-center font-display font-bold tracking-wider uppercase transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none rounded-none skew-x-[-6deg] text-[10px] px-4 py-1.5 border-2 ${
                 showAddressFilter
-                  ? 'bg-neon-cyan text-midnight-950 border-neon-cyan'
-                  : 'bg-muted text-foreground/60 border-border hover:border-neon-cyan hover:text-neon-cyan'
+                  ? 'bg-neon-cyan text-midnight-950 border-neon-cyan shadow-neon-cyan'
+                  : selectedAddresses.length > 0
+                  ? 'bg-neon-cyan/10 text-neon-cyan border-neon-cyan hover:bg-neon-cyan hover:text-midnight-950 shadow-[inset_0_0_10px_rgba(0,240,255,0.2)]'
+                  : 'bg-midnight-950 text-neon-cyan border-neon-cyan hover:bg-neon-cyan hover:text-midnight-950 hover:shadow-neon-cyan shadow-[inset_0_0_10px_rgba(0,240,255,0.2)]'
               }`}
               onClick={() => setShowAddressFilter(!showAddressFilter)}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-              <span>{t('feed.filter_addresses')}</span>
-              {selectedAddresses.length > 0 && (
-                <span className={`px-1.5 py-0.5 text-[8px] ${showAddressFilter ? 'bg-white/10' : 'bg-foreground/10'}`}>{selectedAddresses.length}</span>
-              )}
-              <svg className={`w-3 h-3 transition-transform ${showAddressFilter ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
-              </svg>
+              <span className="skew-x-[6deg] flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span>{t('feed.filter_addresses')}</span>
+                <span className={`px-1.5 py-0.5 ${showAddressFilter ? 'bg-midnight-950/20' : 'bg-midnight-950/20'} text-[8px]`}>
+                  {selectedAddresses.length > 0 ? selectedAddresses.length : allAddresses.length}/{allAddresses.length}
+                </span>
+                <svg className={`w-3 h-3 transition-transform ${showAddressFilter ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
             </button>
 
             {/* Address Filter Dropdown Panel */}
             {showAddressFilter && (
-              <div className="address-filter-dropdown absolute right-0 top-full mt-2 w-[320px] bg-card border border-border shadow-2xl z-50 animate-fade-in">
-                <div className="p-4 border-b border-border">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-foreground/60">
+              <div className="address-filter-dropdown absolute right-0 top-full mt-2 w-[320px] bg-midnight-950 border border-neon-cyan/30 shadow-neon-cyan/20 z-50 animate-fade-in">
+                <div className="p-4 border-b border-neon-cyan/20">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-neon-cyan/80">
                     {t('feed.select_addresses')}
                   </h3>
                 </div>
-                <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-4 space-y-2">
+                <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
                   {allAddresses.length === 0 ? (
                     <div className="py-8 text-center">
                       <p className="text-sm font-black text-foreground/20 uppercase italic tracking-tighter">{t('feed.no_addresses')}</p>
@@ -355,8 +369,8 @@ export default function Feed() {
                       return (
                         <div
                           key={address}
-                          className={`flex items-center gap-3 p-3 bg-background border border-border hover:border-neon-cyan/50 transition-all cursor-pointer ${
-                            isSelected ? 'border-neon-cyan bg-neon-cyan/5' : ''
+                          className={`flex items-center gap-3 px-4 py-3 hover:bg-neon-cyan/5 cursor-pointer ${
+                            isSelected ? 'bg-neon-cyan/10' : ''
                           }`}
                           onClick={() => {
                             setSelectedAddresses(prev => {
@@ -368,7 +382,7 @@ export default function Feed() {
                             });
                           }}
                         >
-                          <div className={`w-2 h-2 rounded-full ${isSelected ? 'bg-neon-cyan' : 'bg-foreground/20'}`} />
+                          <div className={`w-2 h-2 rounded-full ${isSelected ? 'bg-neon-cyan shadow-neon-cyan' : 'bg-foreground/20'}`} />
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-bold text-foreground truncate">{displayName}</p>
                             <p className="text-[10px] font-mono text-foreground/40 truncate">{formatAddress(address)}</p>
@@ -378,7 +392,7 @@ export default function Feed() {
                     })
                   )}
                 </div>
-                <div className="p-4 border-t border-border flex items-center justify-between gap-2">
+                <div className="p-4 border-t border-neon-cyan/20 flex items-center justify-between gap-2">
                   <button
                     onClick={() => setSelectedAddresses([])}
                     className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-foreground/60 hover:text-neon-red transition-all"
@@ -405,6 +419,7 @@ export default function Feed() {
             variant="cyber"
             size="sm"
             isLoading={isRefreshing}
+            className="feed-refresh-btn"
           >
             {t('room_detail.refresh_now')}
           </Button>
@@ -412,7 +427,14 @@ export default function Feed() {
       </div>
 
       {/* No data state */}
-      {rooms.length === 0 ? (
+      {loading ? (
+        // Skeleton loading state
+        <div className="space-y-4">
+          <ActivitySkeleton />
+          <ActivitySkeleton />
+          <ActivitySkeleton />
+        </div>
+      ) : rooms.length === 0 ? (
         <div className="bg-card/30 border border-dashed border-border p-24 text-center">
           <p className="text-lg font-black text-foreground/20 uppercase italic tracking-tighter">
             {t('feed.no_rooms_message')}
@@ -435,7 +457,7 @@ export default function Feed() {
             return (
               <Card
                 key={group.key}
-                className={`p-0 bg-card/50 border-border hover:border-foreground/10 transition-all overflow-hidden ${
+                className={`activity-item p-0 bg-card/50 border-border hover:border-foreground/10 transition-all overflow-hidden ${
                   isExpanded ? 'border-neon-cyan/30' : ''
                 }`}
               >
@@ -592,6 +614,9 @@ export default function Feed() {
         </div>
       )}
     </div>
+
+    {/* Onboarding Tour */}
+    <OnboardingTour pageName="feed" />
     </>
   );
 }

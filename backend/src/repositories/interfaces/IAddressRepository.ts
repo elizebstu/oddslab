@@ -10,8 +10,3 @@ export interface IAddressRepository {
   existsInRoom(address: string, roomId: string): Promise<boolean>;
   upsertMany(addresses: string[], roomId: string): Promise<Address[]>;
 }
-
-export type AddressCreateInput = {
-  address: string;
-  roomId: string;
-};

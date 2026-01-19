@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { config } from '../config/config';
+import { UnauthorizedError } from '../types/common';
+import { handleControllerError } from '../types/common';
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -13,11 +16,11 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+    const decoded = jwt.verify(token, config.JWT_SECRET) as { userId: string };
     req.userId = decoded.userId;
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+    return handleControllerError(res, new UnauthorizedError('Invalid token'));
   }
 };
 
@@ -27,7 +30,7 @@ export const optionalAuthMiddleware = (req: AuthRequest, res: Response, next: Ne
 
   if (token) {
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+      const decoded = jwt.verify(token, config.JWT_SECRET) as { userId: string };
       req.userId = decoded.userId;
     } catch (error) {
       // Invalid token - just continue without userId

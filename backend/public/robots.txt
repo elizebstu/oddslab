@@ -1,0 +1,17 @@
+# /robots.txt for oddslab.com
+
+User-agent: *
+Allow: /explore
+Allow: /public/
+
+Disallow: /dashboard
+Disallow: /rooms
+Disallow: /login
+Disallow: /register
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://oddslab.com/sitemap.xml
+
+# Crawl-delay (optional, 1 request per second)
+Crawl-delay: 1

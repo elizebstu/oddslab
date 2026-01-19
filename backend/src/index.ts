@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { config, isDevelopment } from './config/config';
 import { logger } from './utils/logger';
@@ -6,9 +6,10 @@ import { resolve } from 'path';
 import authRoutes from './routes/auth';
 import otpRoutes from './routes/otp';
 import roomRoutes from './routes/rooms';
-import addressRoutes from './routes/addressRoutes';
+import addressRoutes from './routes/addresses';
 import postRoutes from './routes/posts';
 import sitemapRoutes from './routes/sitemap';
+import onboardingRoutes from './routes/onboarding';
 
 const app = express();
 const PORT = config.PORT;
@@ -24,6 +25,7 @@ app.use('/api/otp', otpRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/addresses', addressRoutes);
 app.use('/api', postRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 
 // Public sitemap and robots (no auth required)
 app.use('/sitemap.xml', sitemapRoutes);

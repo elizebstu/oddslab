@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import RoomCard from '../components/RoomCard';
-import LoadingSpinner from '../components/LoadingSpinner';
+import OnboardingTour from '../components/OnboardingTour';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import TextArea from '../components/ui/TextArea';
@@ -12,7 +12,8 @@ import type { Room } from '../services/roomService';
 export default function Dashboard() {
   const { t } = useTranslation();
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Changed to false - show UI immediately
+  const [initialLoad, setInitialLoad] = useState(true); // Track first load
   const [showModal, setShowModal] = useState(false);
   const [roomName, setRoomName] = useState('');
   const [description, setDescription] = useState('');
@@ -29,6 +30,7 @@ export default function Dashboard() {
   }, []);
 
   const loadRooms = useCallback(async () => {
+    setLoading(true);
     try {
       const data = await roomService.getRooms();
       setRooms(data);
@@ -36,6 +38,7 @@ export default function Dashboard() {
       console.error('Failed to load rooms:', error);
     } finally {
       setLoading(false);
+      setInitialLoad(false);
     }
   }, []);
 
@@ -52,22 +55,21 @@ export default function Dashboard() {
       setDiscordLink('');
       setShowModal(false);
       loadRooms();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create room:', error);
-      setError(t('dashboard.modal_error'));
+      const errorMsg = error.response?.data?.error || error.message || t('dashboard.modal_error');
+      setError(errorMsg);
     } finally {
       setCreating(false);
     }
   };
 
   const handleDeleteRoom = useCallback((id: string, name: string) => {
-    // Show custom confirmation modal
     setDeleteConfirmRoom({ id, name });
   }, []);
 
   const confirmDeleteRoom = useCallback(async () => {
     if (!deleteConfirmRoom) return;
-
     setIsDeleting(true);
     try {
       await roomService.deleteRoom(deleteConfirmRoom.id);
@@ -80,10 +82,6 @@ export default function Dashboard() {
     }
   }, [deleteConfirmRoom, loadRooms]);
 
-  if (loading) {
-    return <LoadingSpinner fullScreen text={t('common.loading')} />;
-  }
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 relative animate-fade-in">
       {/* Header */}
@@ -93,7 +91,14 @@ export default function Dashboard() {
             {t('dashboard.title')}<span className="text-neon-cyan glow-text-cyan">{t('dashboard.title_highlight')}</span>
           </h1>
           <div className="flex items-center gap-4 text-foreground/30 text-[10px] font-bold uppercase tracking-[0.2em]">
-            <span>{rooms.length} {t('dashboard.stats_active')}</span>
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-neon-cyan rounded-full animate-pulse" />
+                {t('common.loading')}
+              </span>
+            ) : (
+              <span>{rooms.length} {t('dashboard.stats_active')}</span>
+            )}
             <span className="w-1 h-1 bg-foreground/10 rounded-full" />
             <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-pulse" /> {t('dashboard.stats_optimal')}</span>
           </div>
@@ -102,14 +107,26 @@ export default function Dashboard() {
           onClick={() => setShowModal(true)}
           size="lg"
           variant="primary"
-          className="h-14 px-10"
+          className="h-14 px-10 dashboard-create-btn"
         >
           {t('dashboard.create_button')}
         </Button>
       </div>
 
       {/* Main Content */}
-      {rooms.length === 0 ? (
+      {rooms.length === 0 && initialLoad ? (
+        // Skeleton loading state
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-card/50 border border-border p-8 min-h-[260px] animate-pulse">
+              <div className="w-16 h-16 bg-muted border border-border mb-6" />
+              <div className="h-6 bg-muted/50 w-3/4 mb-4" />
+              <div className="h-4 bg-muted/30 w-1/2" />
+            </div>
+          ))}
+        </div>
+      ) : rooms.length === 0 ? (
+        // Empty state
         <div className="bg-card/50 border border-border p-20 text-center relative overflow-hidden group">
           <div className="w-20 h-20 bg-muted border border-border flex items-center justify-center mx-auto mb-10 skew-x-[-6deg] group-hover:border-neon-cyan transition-all">
             <div className="skew-x-[6deg] text-foreground/20">
@@ -129,13 +146,14 @@ export default function Dashboard() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {rooms.map((room) => (
-            <RoomCard
-              key={room.id}
-              room={room}
-              showActions
-              onDelete={(id) => handleDeleteRoom(id, room.name)}
-              isDeleting={isDeleting}
-            />
+            <div key={room.id} className="room-card">
+              <RoomCard
+                room={room}
+                showActions
+                onDelete={(id) => handleDeleteRoom(id, room.name)}
+                isDeleting={isDeleting}
+              />
+            </div>
           ))}
 
           <button
@@ -262,6 +280,9 @@ export default function Dashboard() {
           </p>
         </div>
       </Modal>
+
+      {/* Onboarding Tour */}
+      <OnboardingTour pageName="dashboard" />
     </div>
   );
 }

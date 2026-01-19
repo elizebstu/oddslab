@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Helmet } from 'react-helmet-async';
 import LoadingSpinner from '../components/LoadingSpinner';
+import OnboardingTour from '../components/OnboardingTour';
 import Button from '../components/ui/Button';
 import RoomCard from '../components/RoomCard';
 import { roomService } from '../services/roomService';
@@ -95,7 +96,7 @@ export default function Explore() {
 
       {/* Control Bar */}
       <div className="flex flex-col lg:flex-row items-center gap-6 mb-16 bg-card border border-border p-6 skew-x-[-2deg]">
-        <div className="relative flex-1 w-full skew-x-[2deg]">
+        <div className="relative flex-1 w-full skew-x-[2deg] explore-search">
           <svg className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -142,14 +143,18 @@ export default function Explore() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredAndSortedRooms.map((room) => (
-            <RoomCard
-              key={room.id}
-              room={room}
-            />
+            <div key={room.id} className="public-room-card">
+              <RoomCard
+                room={room}
+              />
+            </div>
           ))}
         </div>
       )}
     </div>
+
+    {/* Onboarding Tour */}
+    <OnboardingTour pageName="explore" />
     </>
   );
 }

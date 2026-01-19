@@ -28,13 +28,17 @@ export class RoomRepository implements IRoomRepository {
   }
 
   async create(data: Prisma.RoomUncheckedCreateInput) {
-    return this.prisma.room.create({ data });
+    return this.prisma.room.create({
+      data,
+      include: { addresses: true },
+    });
   }
 
   async update(id: string, data: Prisma.RoomUpdateInput) {
     return this.prisma.room.update({
       where: { id },
       data,
+      include: { addresses: true },
     });
   }
 
@@ -48,6 +52,7 @@ export class RoomRepository implements IRoomRepository {
     return this.prisma.room.update({
       where: { id },
       data: { isPublic: !room.isPublic },
+      include: { addresses: true },
     });
   }
 

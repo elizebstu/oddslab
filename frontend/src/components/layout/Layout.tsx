@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import MobileBottomNav from './MobileBottomNav';
 
 interface LayoutProps {
     children: ReactNode;
@@ -18,10 +19,11 @@ export default function Layout({ children, showNavbar = true, showFooter = true 
             </div>
 
             {showNavbar && <Navbar />}
-            <main className="flex-1 flex flex-col relative z-10">
+            <main className="flex-1 flex flex-col relative z-10 pb-16 lg:pb-0">
                 {children}
             </main>
             {showFooter && <Footer />}
+            <MobileBottomNav />
 
             {/* Global Scanline Overlay */}
             <div className="fixed inset-0 pointer-events-none z-[100] scanline-overlay opacity-30" />

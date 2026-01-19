@@ -91,7 +91,7 @@
         "total_sells": "总卖出",
         "current_position": "当前持仓",
         "transaction_history": "交易历史",
-        "filter_addresses": "筛选地址",
+        "filter_addresses": "数据来源",
         "select_addresses": "选择要显示的地址",
         "no_addresses": "没有可筛选的地址",
         "clear_all": "清空",

@@ -9,13 +9,4 @@ export interface IUserRepository {
   existsByEmail(email: string): Promise<boolean>;
 }
 
-export type UserCreateInput = {
-  email: string;
-  password: string;
-};
-
-export type UserResponse = {
-  id: string;
-  email: string;
-  createdAt: Date;
-};
+export type UserCreateInput = Prisma.UserCreateInput;

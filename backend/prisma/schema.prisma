@@ -8,11 +8,12 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  Room      Room[]
+  id               String   @id @default(uuid())
+  email            String   @unique
+  password         String
+  onboardingStatus Json?
+  createdAt        DateTime @default(now())
+  Room             Room[]
 }
 
 model Address {

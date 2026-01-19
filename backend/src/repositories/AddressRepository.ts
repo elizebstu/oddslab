@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import type { IAddressRepository, AddressCreateInput } from './interfaces/IAddressRepository';
+import { PrismaClient, Prisma } from '@prisma/client';
+import type { IAddressRepository } from './interfaces/IAddressRepository';
 
 export class AddressRepository implements IAddressRepository {
   constructor(private prisma: PrismaClient) {}
@@ -15,11 +15,11 @@ export class AddressRepository implements IAddressRepository {
     });
   }
 
-  async create(data: AddressCreateInput) {
+  async create(data: Prisma.AddressCreateInput) {
     return this.prisma.address.create({ data });
   }
 
-  async upsert(data: { where: { address_roomId: { address: string; roomId: string } }; create: { address: string; roomId: string }; update: {} }) {
+  async upsert(data: Prisma.AddressUpsertArgs) {
     return this.prisma.address.upsert(data);
   }
 

@@ -22,6 +22,12 @@ export interface Post {
   hasPolymarketLink?: boolean;
 }
 
+const ensureArray = <T>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data;
+  console.error('Expected array but got:', data);
+  return [];
+};
+
 export const postService = {
   // Create a new post (room owner only)
   createPost: async (roomId: string, content: string): Promise<Post> => {
@@ -32,7 +38,7 @@ export const postService = {
   // Get posts for a room
   getPosts: async (roomId: string): Promise<Post[]> => {
     const response = await api.get(`/rooms/${roomId}/posts`);
-    return response.data;
+    return ensureArray<Post>(response.data);
   },
 
   // Delete a post (room owner only)
@@ -49,7 +55,7 @@ export const postService = {
   // Get comments for a post
   getComments: async (postId: string): Promise<Comment[]> => {
     const response = await api.get(`/posts/${postId}/comments`);
-    return response.data;
+    return ensureArray<Comment>(response.data);
   },
 
   // Delete a comment

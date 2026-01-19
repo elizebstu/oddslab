@@ -96,17 +96,15 @@ export function handleControllerError(res: Response, error: unknown): void {
 }
 
 /**
- * Send a success response
+ * Send a success response (backward compatible - returns data directly)
  */
 export function sendSuccess<T>(res: Response, data: T, statusCode: number = 200): void {
-  const response: ApiResponse<T> = { success: true, data };
-  res.status(statusCode).json(response);
+  res.status(statusCode).json(data);
 }
 
 /**
  * Send a success response with a message
  */
 export function sendSuccessMessage(res: Response, message: string, statusCode: number = 200): void {
-  const response: ApiResponse = { success: true, message };
-  res.status(statusCode).json(response);
+  res.status(statusCode).json({ message });
 }

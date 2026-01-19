@@ -50,6 +50,12 @@ export interface Position {
   holders?: PositionHolder[];
 }
 
+const ensureArray = <T>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data;
+  console.error('Expected array but got:', data);
+  return [];
+};
+
 export const roomService = {
   createRoom: async (
     name: string,
@@ -88,7 +94,7 @@ export const roomService = {
 
   getRooms: async (): Promise<Room[]> => {
     const response = await api.get('/rooms');
-    return response.data;
+    return ensureArray<Room>(response.data);
   },
 
   getRoom: async (id: string): Promise<Room> => {
@@ -107,6 +113,6 @@ export const roomService = {
 
   getPublicRooms: async (): Promise<Room[]> => {
     const response = await api.get('/rooms/public/all');
-    return response.data;
+    return ensureArray<Room>(response.data);
   },
 };

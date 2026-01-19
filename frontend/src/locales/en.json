@@ -90,7 +90,12 @@
         "total_buys": "Total Buys",
         "total_sells": "Total Sells",
         "current_position": "Current Position",
-        "transaction_history": "Transaction History"
+        "transaction_history": "Transaction History",
+        "filter_addresses": "Data Sources",
+        "select_addresses": "Select addresses to display",
+        "no_addresses": "No addresses to filter",
+        "clear_all": "Clear All",
+        "select_all": "Select All"
     },
     "explore": {
         "badge": "Public Network",

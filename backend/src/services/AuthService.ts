@@ -29,9 +29,8 @@ export class AuthService {
     this.sendMockVerificationEmail(email);
 
     const token = this.generateToken(user.id);
-    const userResponse = this.deps.userRepository.toResponse(user);
 
-    return { token, user: userResponse };
+    return { token, user: { id: user.id, email: user.email } };
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
@@ -50,9 +49,8 @@ export class AuthService {
     logger.info(`User logged in: ${user.id}`);
 
     const token = this.generateToken(user.id);
-    const userResponse = this.deps.userRepository.toResponse(user);
 
-    return { token, user: userResponse };
+    return { token, user: { id: user.id, email: user.email } };
   }
 
   verifyToken(token: string): { userId: string } {
@@ -72,7 +70,7 @@ export class AuthService {
   }
 
   private generateToken(userId: string): string {
-    return jwt.sign({ userId }, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRES_IN });
+    return jwt.sign({ userId }, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRES_IN } as jwt.SignOptions);
   }
 
   private sendMockVerificationEmail(email: string): void {

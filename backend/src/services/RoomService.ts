@@ -23,7 +23,7 @@ export class RoomService {
 
     logger.info(`Room created: ${room.id} by user: ${userId}`);
 
-    return { ...room, addresses: [] };
+    return room;
   }
 
   async getRooms(userId: string): Promise<RoomWithAddresses[]> {
@@ -66,7 +66,7 @@ export class RoomService {
 
     logger.info(`Room updated: ${id} by user: ${userId}`);
 
-    return { ...updatedRoom, addresses: room.addresses };
+    return updatedRoom;
   }
 
   async deleteRoom(id: string, userId: string): Promise<void> {
@@ -104,7 +104,7 @@ export class RoomService {
 
     logger.info(`Room visibility toggled: ${id} by user: ${userId}`);
 
-    return { ...updatedRoom, addresses: room.addresses };
+    return updatedRoom;
   }
 
   async getPublicRooms(): Promise<RoomWithAddresses[]> {
